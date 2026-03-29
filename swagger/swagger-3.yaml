@@ -577,6 +577,23 @@ paths:
       responses:
         "200":
           description: Ranges for UI sliders
+  /img-proxy:
+    get:
+      tags: [Insights]
+      summary: Proxy remote listing images from approved hosts
+      parameters:
+        - in: query
+          name: url
+          required: true
+          schema: { type: string }
+          description: Remote image URL (allowed hosts only)
+      responses:
+        "200":
+          description: Image bytes
+        "403":
+          description: Origin not allowed
+        "502":
+          description: Proxy error
   /value-estimate:
     get:
       tags: [Insights]

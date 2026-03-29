@@ -3,12 +3,20 @@ import { type NextRequest, NextResponse } from "next/server";
 /**
  * GET /api/img?url=<encoded-image-url>
  *
- * Server-side image proxy.  Fetches the remote image WITHOUT a Referer header
- * so CDNs with hotlink-protection (content.mzadqatar.com, files.qatarliving.com)
- * respond with 200 instead of 403.
+ * Server-side image proxy.
  *
- * Security: only proxies images from our known allowed origins.
+ * ALL known CDN hostnames are relayed through the backend server at
+ * 174.165.78.29:8090/api/img-proxy because:
+ *
+ *  - files.qatarliving.com   — no public DNS; only resolves inside Qatar
+ *  - content.mzadqatar.com   — Cloudflare-protected; returns 403 from Vercel
+ *
+ * The backend server is Qatar-hosted and can reach both CDNs directly.
+ *
+ * Security: only proxies images from known allowed origins.
  */
+
+const BACKEND = "http://174.165.78.29:8090";
 
 const ALLOWED_ORIGINS = [
   "content.mzadqatar.com",
@@ -39,15 +47,13 @@ export async function GET(req: NextRequest) {
     return new NextResponse("Origin not allowed", { status: 403 });
   }
 
+  // Always relay through the backend — it's Qatar-hosted and can reach both
+  // content.mzadqatar.com and files.qatarliving.com directly.
+  const fetchUrl = `${BACKEND}/api/img-proxy?url=${encodeURIComponent(url)}`;
+
   try {
-    // Fetch without Referer — the key that bypasses hotlink protection
-    const upstream = await fetch(url, {
-      headers: {
-        // Mimic a direct browser visit with no referrer
-        "User-Agent":
-          "Mozilla/5.0 (compatible; MzadCarsBot/1.0)",
-      },
-      // Don't forward any cache signals from the client
+    const upstream = await fetch(fetchUrl, {
+      headers: { "User-Agent": "Mozilla/5.0 (compatible; MzadCarsBot/1.0)" },
       cache: "force-cache",
     });
 
@@ -64,7 +70,6 @@ export async function GET(req: NextRequest) {
       status: 200,
       headers: {
         "Content-Type": contentType,
-        // Cache aggressively at the CDN/browser level
         "Cache-Control": "public, max-age=86400, stale-while-revalidate=3600",
       },
     });

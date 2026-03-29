@@ -6,22 +6,34 @@ import Image from "next/image";
 const FALLBACK =
   "https://images.unsplash.com/photo-1493238792000-8113da705763?q=80&w=1200&auto=format&fit=crop";
 
+/** Returns true if the src is a data/blob URL or the known Unsplash fallback — skip error handling */
+function isFallback(src: string) {
+  return src === FALLBACK || src.startsWith("data:") || src.startsWith("blob:");
+}
+
 export function ImageCarousel({ images }: { images: string[] }) {
   const all = images.length ? images : [FALLBACK];
   const [active, setActive] = useState(0);
+  // Track per-index error state so broken images degrade to fallback
+  const [errors, setErrors] = useState<Record<number, boolean>>({});
+  const markError = (idx: number) =>
+    setErrors((prev) => ({ ...prev, [idx]: true }));
+
+  const src = (idx: number) => (errors[idx] ? FALLBACK : all[idx]);
 
   // Single image — show it at a comfortable height, not full-bleed
   if (all.length === 1) {
     return (
       <div className="relative aspect-[16/9] w-full overflow-hidden rounded-2xl bg-neutral-100">
         <Image
-          src={all[0]}
+          src={src(0)}
           alt="Car photo"
           fill
           unoptimized
           sizes="(max-width: 768px) 100vw, 50vw"
           className="object-cover"
           priority
+          onError={() => !isFallback(all[0]) && markError(0)}
         />
       </div>
     );
@@ -36,13 +48,14 @@ export function ImageCarousel({ images }: { images: string[] }) {
       {/* ── Hero ── */}
       <div className="relative aspect-[16/9] w-full overflow-hidden rounded-2xl bg-neutral-100">
         <Image
-          src={all[active]}
+          src={src(active)}
           alt={`Car photo ${active + 1}`}
           fill
           unoptimized
           sizes="(max-width: 768px) 100vw, 50vw"
           className="object-cover transition-opacity duration-300"
           priority={active === 0}
+          onError={() => !isFallback(all[active]) && markError(active)}
         />
         {/* image counter pill */}
         <span className="absolute bottom-2 right-2 rounded-full bg-black/60 px-2.5 py-1 text-xs font-medium text-white">
@@ -71,12 +84,12 @@ export function ImageCarousel({ images }: { images: string[] }) {
 
       {/* ── Thumbnail strip ── */}
       <div className="grid grid-cols-4 gap-1.5 sm:gap-2">
-        {thumbs.map((src, idx) => {
+        {thumbs.map((_, idx) => {
           const realIdx = idx + 1;
           const isLast = idx === thumbs.length - 1 && remaining > 0;
           return (
             <button
-              key={src}
+              key={all[realIdx]}
               onClick={() => setActive(realIdx)}
               className={`relative aspect-[4/3] overflow-hidden rounded-xl bg-neutral-100 focus:outline-none ${
                 active === realIdx
@@ -85,13 +98,14 @@ export function ImageCarousel({ images }: { images: string[] }) {
               }`}
             >
               <Image
-                src={src}
+                src={src(realIdx)}
                 alt={`Car photo ${realIdx + 1}`}
                 fill
                 unoptimized
                 sizes="25vw"
                 className="object-cover"
                 loading="lazy"
+                onError={() => !isFallback(all[realIdx]) && markError(realIdx)}
               />
               {isLast && (
                 <div className="absolute inset-0 flex items-center justify-center rounded-xl bg-black/55">

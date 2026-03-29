@@ -12,11 +12,11 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
 const NAV_LINKS = [
-  { href: "/",         label: "Home"    },
-  { href: "/listings", label: "Browse"  },
-  { href: "/sell",     label: "Sell"    },
-  { href: "/pricing",  label: "Pricing" },
-  { href: "/dealer",   label: "Dealer"  },
+  { href: "/",              label: "Home"         },
+  { href: "/listings",      label: "Browse"       },
+  { href: "/sell",          label: "Sell"         },
+  { href: "/dealer-signup", label: "For Dealers"  },
+  { href: "/pricing",       label: "Pricing"      },
 ];
 
 export function AppShell({ children }: { children: React.ReactNode }) {

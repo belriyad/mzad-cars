@@ -5,11 +5,15 @@ import { useQuery } from "@tanstack/react-query";
 import { Card } from "@/components/ui/card";
 import { StatusChip } from "@/components/common/status-chip";
 import { adminService } from "@/services/admin.service";
+import { useAdminAuth } from "@/hooks/use-admin-auth";
 
 export default function ModerationQueuePage() {
+  const { token, isAdmin } = useAdminAuth();
+
   const query = useQuery({
-    queryKey: ["admin-moderation"],
-    queryFn: () => adminService.moderationQueue(),
+    queryKey: ["admin-moderation", token],
+    queryFn: () => adminService.moderationQueue(token),
+    enabled: isAdmin,
   });
 
   return (

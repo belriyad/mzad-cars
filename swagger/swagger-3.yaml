@@ -225,7 +225,7 @@ paths:
               properties:
                 role:
                   type: string
-                  enum: [guest, user, admin]
+                  enum: [guest, user, dealer, admin]
                 is_active:
                   type: boolean
       responses:
@@ -919,7 +919,7 @@ components:
       type: object
       properties:
         id: { type: string }
-        role: { type: string, enum: [guest, user, admin] }
+        role: { type: string, enum: [guest, user, dealer, admin] }
         email: { type: string, format: email }
         phone: { type: string }
         full_name: { type: string }

@@ -18,6 +18,7 @@ import { Badge } from "@/components/ui/badge";
 import { RoleGate } from "@/components/auth/role-gate";
 import { dealerService } from "@/services/dealer.service";
 import { formatCurrencyQAR } from "@/lib/utils";
+import { useAuthStore } from "@/store/auth-store";
 
 const QUICK_LINKS = [
   {
@@ -64,14 +65,19 @@ const TIPS = [
 ];
 
 export default function DealerDashboardPage() {
+  const token = useAuthStore((s) => s.accessToken) ?? undefined;
+  const user = useAuthStore((s) => s.user);
+
   const analytics = useQuery({
-    queryKey: ["dealer-analytics"],
-    queryFn: () => dealerService.analytics(),
+    queryKey: ["dealer-analytics", user?.id],
+    queryFn: () => dealerService.analytics(token),
+    enabled: !!token,
   });
 
   const inventory = useQuery({
-    queryKey: ["dealer-inventory"],
-    queryFn: () => dealerService.inventory(),
+    queryKey: ["dealer-inventory", user?.id],
+    queryFn: () => dealerService.inventory(user?.id, token),
+    enabled: !!token,
   });
 
   const recentListings = inventory.data?.slice(0, 3) ?? [];

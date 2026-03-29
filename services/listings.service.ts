@@ -13,8 +13,8 @@ function toQueryString(filters: ListingFilters = {}) {
 
 export const listingsService = {
   /** Public feed — approved listings only (is_approved=1 is the backend default for authed and unauthed). */
-  list: (filters?: ListingFilters) =>
-    apiRequest<ListingsResponse>(`/listings?is_approved=1&${toQueryString(filters)}`),
+  list: (filters?: ListingFilters, token?: string) =>
+    apiRequest<ListingsResponse>(`/listings?is_approved=1&${toQueryString(filters)}`, { token }),
   /**
    * Admin-only: fetch ALL listings regardless of approval status.
    * Requires a valid bearer token; the backend returns 401 without one for is_approved=any.

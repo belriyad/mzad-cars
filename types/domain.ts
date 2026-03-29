@@ -161,6 +161,7 @@ export interface ListingFilters {
   deals_only?: "0" | "1";
   limit?: number;
   offset?: number; // for pagination / infinite scroll
+  seller_user_id?: string; // filter by listing owner — used for dealer inventory
   /** Filter by approval status. "1" = approved only, "0" = rejected only */
   is_approved?: "0" | "1" | "any";
 }
@@ -215,6 +216,10 @@ export interface SummaryResponse {
     listingsWithPhone: number;
     uniquePhoneNumbers: number;
     coveragePct: number;
+  };
+  approvalStats?: {
+    approved: number;
+    pending: number;
   };
   sourceStats?: Array<{
     source: "mzad" | "qatarliving";

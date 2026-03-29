@@ -4,11 +4,16 @@ import { useQuery } from "@tanstack/react-query";
 import { Card } from "@/components/ui/card";
 import { dealerService } from "@/services/dealer.service";
 import { formatCurrencyQAR } from "@/lib/utils";
+import { useAuthStore } from "@/store/auth-store";
 
 export default function DealerInventoryPage() {
+  const token = useAuthStore((s) => s.accessToken) ?? undefined;
+  const user = useAuthStore((s) => s.user);
+
   const query = useQuery({
-    queryKey: ["dealer-inventory"],
-    queryFn: () => dealerService.inventory(),
+    queryKey: ["dealer-inventory", user?.id],
+    queryFn: () => dealerService.inventory(user?.id, token),
+    enabled: !!token,
   });
 
   return (

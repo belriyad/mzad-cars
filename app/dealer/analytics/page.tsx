@@ -3,11 +3,16 @@
 import { useQuery } from "@tanstack/react-query";
 import { Card } from "@/components/ui/card";
 import { dealerService } from "@/services/dealer.service";
+import { useAuthStore } from "@/store/auth-store";
 
 export default function DealerAnalyticsPage() {
+  const token = useAuthStore((s) => s.accessToken) ?? undefined;
+  const user = useAuthStore((s) => s.user);
+
   const query = useQuery({
-    queryKey: ["dealer-analytics"],
-    queryFn: () => dealerService.analytics(),
+    queryKey: ["dealer-analytics", user?.id],
+    queryFn: () => dealerService.analytics(token),
+    enabled: !!token,
   });
 
   return (

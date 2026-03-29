@@ -66,6 +66,9 @@ export interface Listing {
   deal_score?: number;
   deal_reason?: string;
   deal_last_computed_at?: string; // ISO date-time
+  // --- moderation ---
+  /** null/undefined = pending review, true = approved, false = rejected */
+  is_approved?: boolean | null;
   // --- local/legacy (not in swagger, kept for backward compat) ---
   /** @deprecated not in backend schema; use discount_pct */
   deal_rating?: string;
@@ -158,6 +161,8 @@ export interface ListingFilters {
   deals_only?: "0" | "1";
   limit?: number;
   offset?: number; // for pagination / infinite scroll
+  /** Filter by approval status. "1" = approved only, "0" = rejected only */
+  is_approved?: "0" | "1";
 }
 
 // ── Profile ────────────────────────────────────────────────────────────────

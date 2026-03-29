@@ -80,15 +80,39 @@ export interface Listing {
 /** Parsed image array from image_urls_json or all_image_urls_json */
 
 /**
- * Rewrites a bare `http://174.165.78.29:...` image URL through the Next.js
- * `/_img` rewrite so it is served from the same origin on Vercel.
- * Other URLs (https CDNs, relative paths) are returned unchanged.
+ * Rewrites external image URLs through `/api/img?url=` so they are fetched
+ * server-side — bypassing CDN hotlink-protection (403) that blocks requests
+ * carrying a foreign Referer header from the browser.
+ *
+ * Affected hostnames:
+ *   - content.mzadqatar.com   (hotlink-protected)
+ *   - files.qatarliving.com   (hotlink-protected)
+ *   - http://174.165.78.29    (bare HTTP, unreachable from Vercel CDN)
+ *
+ * Unsplash and relative URLs are returned unchanged.
  */
 export function proxyImageUrl(url: string): string {
-  if (url.startsWith("http://174.165.78.29")) {
-    // Strip the origin; keep the path+query portion
-    const withoutOrigin = url.replace(/^http:\/\/174\.165\.78\.29(:\d+)?/, "");
-    return `/_img${withoutOrigin}`;
+  if (!url) return url;
+  // Already a proxy URL — don't double-wrap
+  if (url.startsWith("/api/img") || url.startsWith("/_img")) return url;
+  // Local / relative — no proxy needed
+  if (url.startsWith("/") && !url.startsWith("//")) return url;
+
+  try {
+    const { hostname } = new URL(url);
+    const PROXIED = [
+      "content.mzadqatar.com",
+      "files.qatarliving.com",
+      "images.qatarliving.com",
+    ];
+    if (
+      PROXIED.some((h) => hostname === h || hostname.endsWith(`.${h}`)) ||
+      hostname === "174.165.78.29"
+    ) {
+      return `/api/img?url=${encodeURIComponent(url)}`;
+    }
+  } catch {
+    // malformed URL — return as-is
   }
   return url;
 }

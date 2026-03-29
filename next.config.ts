@@ -13,6 +13,12 @@ const nextConfig: NextConfig = {
         source: "/api-proxy/:path*",
         destination: "http://174.165.78.29:8090/api/:path*",
       },
+      // Proxy backend images so Vercel's image optimizer never hits a bare HTTP IP.
+      // Usage: /_img/some/path  →  http://174.165.78.29:8090/some/path
+      {
+        source: "/_img/:path*",
+        destination: "http://174.165.78.29:8090/:path*",
+      },
     ];
   },
   images: {
@@ -33,10 +39,8 @@ const nextConfig: NextConfig = {
         protocol: "https",
         hostname: "*.qatarliving.com",
       },
-      {
-        protocol: "http",
-        hostname: "174.165.78.29",
-      },
+      // Images coming through the /_img proxy are served from the same origin,
+      // so no remote pattern is needed for the bare IP any more.
     ],
   },
 };

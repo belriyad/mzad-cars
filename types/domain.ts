@@ -78,13 +78,28 @@ export interface Listing {
 }
 
 /** Parsed image array from image_urls_json or all_image_urls_json */
+
+/**
+ * Rewrites a bare `http://174.165.78.29:...` image URL through the Next.js
+ * `/_img` rewrite so it is served from the same origin on Vercel.
+ * Other URLs (https CDNs, relative paths) are returned unchanged.
+ */
+export function proxyImageUrl(url: string): string {
+  if (url.startsWith("http://174.165.78.29")) {
+    // Strip the origin; keep the path+query portion
+    const withoutOrigin = url.replace(/^http:\/\/174\.165\.78\.29(:\d+)?/, "");
+    return `/_img${withoutOrigin}`;
+  }
+  return url;
+}
+
 export function parseImageUrls(listing: Listing): string[] {
   const raw = listing.all_image_urls_json ?? listing.image_urls_json;
   if (raw) {
-    try { return JSON.parse(raw) as string[]; } catch { /* ignore */ }
+    try { return (JSON.parse(raw) as string[]).map(proxyImageUrl); } catch { /* ignore */ }
   }
-  if (listing.images?.length) return listing.images;
-  if (listing.main_image_url) return [listing.main_image_url];
+  if (listing.images?.length) return listing.images.map(proxyImageUrl);
+  if (listing.main_image_url) return [proxyImageUrl(listing.main_image_url)];
   return [];
 }
 

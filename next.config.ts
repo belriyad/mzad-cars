@@ -22,26 +22,10 @@ const nextConfig: NextConfig = {
     ];
   },
   images: {
-    remotePatterns: [
-      {
-        protocol: "https",
-        hostname: "images.unsplash.com",
-      },
-      {
-        protocol: "https",
-        hostname: "content.mzadqatar.com",
-      },
-      {
-        protocol: "https",
-        hostname: "files.qatarliving.com",
-      },
-      {
-        protocol: "https",
-        hostname: "*.qatarliving.com",
-      },
-      // Images coming through the /_img proxy are served from the same origin,
-      // so no remote pattern is needed for the bare IP any more.
-    ],
+    // Skip Vercel's image optimizer — images are served directly from the CDN
+    // (content.mzadqatar.com / files.qatarliving.com). This avoids the 502
+    // that occurs when Vercel's optimizer tries to fetch external images.
+    unoptimized: true,
   },
 };
 

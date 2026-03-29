@@ -18,6 +18,7 @@ export function ImageCarousel({ images }: { images: string[] }) {
           src={all[0]}
           alt="Car photo"
           fill
+          unoptimized
           sizes="(max-width: 768px) 100vw, 50vw"
           className="object-cover"
           priority
@@ -38,6 +39,7 @@ export function ImageCarousel({ images }: { images: string[] }) {
           src={all[active]}
           alt={`Car photo ${active + 1}`}
           fill
+          unoptimized
           sizes="(max-width: 768px) 100vw, 50vw"
           className="object-cover transition-opacity duration-300"
           priority={active === 0}
@@ -86,6 +88,7 @@ export function ImageCarousel({ images }: { images: string[] }) {
                 src={src}
                 alt={`Car photo ${realIdx + 1}`}
                 fill
+                unoptimized
                 sizes="25vw"
                 className="object-cover"
                 loading="lazy"

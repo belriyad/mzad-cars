@@ -237,6 +237,26 @@ export default function AdminListingsPage() {
         </Card>
       ) : isError ? (
         <Card className="p-6 text-center text-red-600">Failed to load listings.</Card>
+      ) : filtered.length === 0 && listings.length === 0 ? (
+        <div className="rounded-2xl border border-amber-200 bg-amber-50 p-6 space-y-3">
+          <div className="flex items-start gap-3">
+            <span className="text-2xl">⚠️</span>
+            <div>
+              <p className="font-semibold text-amber-900">Backend returns 0 listings</p>
+              <p className="text-sm text-amber-800 mt-1">
+                The backend filters by <code className="bg-amber-100 px-1 rounded">is_approved = true</code> by
+                default. No listings have been approved yet, so the API returns nothing. Run this on the server to
+                bulk-approve all existing listings:
+              </p>
+            </div>
+          </div>
+          <pre className="bg-neutral-900 text-green-400 rounded-xl px-4 py-3 text-xs overflow-x-auto leading-relaxed">
+{`sqlite3 /path/to/mzad.db "UPDATE listings SET is_approved=1 WHERE is_approved IS NULL OR is_approved=0;"`}
+          </pre>
+          <p className="text-xs text-amber-700">
+            After running, refresh this page — all listings will appear and you can manage approval from here.
+          </p>
+        </div>
       ) : filtered.length === 0 ? (
         <Card className="p-6 text-center text-neutral-500">No listings match your filters.</Card>
       ) : (

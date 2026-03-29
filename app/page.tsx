@@ -1,65 +1,94 @@
-import Image from "next/image";
+import Link from "next/link";
+import { ArrowRight, CarFront, MessageCircle, ShieldCheck, Sparkles, TrendingUp } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { WHATSAPP_LISTING_MESSAGE, WHATSAPP_LISTING_NUMBER } from "@/lib/constants";
+import { CarWorthWidget } from "@/features/home/car-worth-widget";
+import { TopDealsStrip } from "@/features/home/top-deals-strip";
 
 export default function Home() {
+  const whatsappHref = `https://wa.me/${WHATSAPP_LISTING_NUMBER}?text=${encodeURIComponent(WHATSAPP_LISTING_MESSAGE)}`;
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
+    <section className="space-y-6">
+      <Card className="overflow-hidden bg-gradient-to-br from-[#0f172a] via-[#111827] to-[#1f2937] p-6 text-white md:p-8">
+        <div className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3 py-1 text-xs">
+          <Sparkles className="h-3.5 w-3.5" /> Sell smarter • Buy confidently
+        </div>
+        <h1 className="mt-4 max-w-2xl text-3xl font-semibold leading-tight md:text-5xl">
+          Sell your car via WhatsApp in minutes. Find top deals instantly.
+        </h1>
+        <p className="mt-3 max-w-2xl text-sm text-neutral-200 md:text-base">
+          Send your registration card and a few photos on WhatsApp. We guide listing setup for you. Buyers get premium browsing with market-aware deal insights.
+        </p>
+        <div className="mt-6 flex flex-wrap items-center gap-2">
+          <a href={whatsappHref} target="_blank" rel="noopener noreferrer" className="inline-flex">
+            <Button variant="premium" size="lg" className="min-w-[190px]">
+              List on WhatsApp <MessageCircle className="ml-1 h-4 w-4" />
+            </Button>
+          </a>
+          <Link href="/listings" className="inline-flex">
+            <Button variant="secondary" size="lg" className="min-w-[190px]">
+              Browse top deals <ArrowRight className="ml-1 h-4 w-4" />
+            </Button>
+          </Link>
+          <Link href="/sell" className="inline-flex">
+            <Button variant="ghost" size="lg" className="min-w-[190px] text-white hover:bg-white/10 hover:text-white">
+              Advanced seller flow
+            </Button>
+          </Link>
+        </div>
+
+        <div className="mt-6 grid auto-rows-fr gap-3 md:grid-cols-3">
+          <div className="flex h-full flex-col rounded-2xl border border-white/15 bg-white/5 p-3">
+            <p className="text-xs text-neutral-300">Live inventory</p>
+            <p className="mt-1 text-2xl font-semibold">10k+</p>
+          </div>
+          <div className="flex h-full flex-col rounded-2xl border border-white/15 bg-white/5 p-3">
+            <p className="text-xs text-neutral-300">Avg. listing quality score</p>
+            <p className="mt-1 text-2xl font-semibold">4.8/5</p>
+          </div>
+          <div className="flex h-full flex-col rounded-2xl border border-white/15 bg-white/5 p-3">
+            <p className="text-xs text-neutral-300">Verified dealer network</p>
+            <p className="mt-1 text-2xl font-semibold">500+</p>
+          </div>
+        </div>
+      </Card>
+
+      <div className="grid auto-rows-fr gap-3 md:grid-cols-3">
+        <Card className="flex h-full flex-col">
+          <div className="inline-flex rounded-xl bg-neutral-100 p-2"><MessageCircle className="h-4 w-4" /></div>
+          <h2 className="mt-3 font-semibold">1) Message us on WhatsApp</h2>
+          <p className="mt-2 text-sm text-neutral-600">Start with a quick message. No complicated setup or long forms to begin.</p>
+        </Card>
+        <Card className="flex h-full flex-col">
+          <div className="inline-flex rounded-xl bg-neutral-100 p-2"><CarFront className="h-4 w-4" /></div>
+          <h2 className="mt-3 font-semibold">2) Send registration + photos</h2>
+          <p className="mt-2 text-sm text-neutral-600">Share your car registration card and clear images. We help structure the listing details.</p>
+        </Card>
+        <Card className="flex h-full flex-col">
+          <div className="inline-flex rounded-xl bg-neutral-100 p-2"><ShieldCheck className="h-4 w-4" /></div>
+          <h2 className="mt-3 font-semibold">3) Review and go live</h2>
+          <p className="mt-2 text-sm text-neutral-600">After quick verification and quality checks, your listing goes live to serious buyers.</p>
+        </Card>
+      </div>
+
+      <div className="grid items-stretch gap-4 lg:grid-cols-[1.1fr_1fr]">
+        {/* min-w-0 stops the flex/grid child from growing past its allotted column */}
+        <Card className="flex min-w-0 flex-col space-y-3 overflow-hidden">
+          <div className="flex items-center gap-2 text-sm text-neutral-600">
+            <TrendingUp className="h-4 w-4" />
+            Top deals today
+          </div>
+          <h2 className="text-xl font-semibold">Best deals ranked by market percentage</h2>
+          <p className="text-sm text-neutral-600">
+            Discover listings that are priced below expected market range, prioritized by deal percentage.
           </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
-    </div>
+          <TopDealsStrip />
+        </Card>
+
+        <CarWorthWidget />
+      </div>
+    </section>
   );
 }

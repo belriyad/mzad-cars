@@ -1,0 +1,954 @@
+openapi: 3.0.3
+info:
+  title: Mzad Cars Backend API
+  version: 1.0.0
+  description: |
+    API contract for listings, valuation, alerts, notifications, push/WhatsApp channels,
+    authentication, user/profile management, and listing CRUD.
+servers:
+  - url: http://localhost:8090/api
+    description: Local development
+tags:
+  - name: Auth
+  - name: Users
+  - name: Profile
+  - name: Listings
+  - name: Insights
+  - name: Alerts
+  - name: Notifications
+  - name: Channels
+  - name: Push
+  - name: Collector
+security:
+  - bearerAuth: []
+  - guestToken: []
+paths:
+  /auth/guest/login:
+    post:
+      tags: [Auth]
+      summary: Issue guest token
+      security: []
+      responses:
+        "200":
+          description: Guest token issued
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthTokens"
+  /auth/register:
+    post:
+      tags: [Auth]
+      summary: Register a user account
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegisterRequest"
+      responses:
+        "201":
+          description: User registered
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthTokens"
+  /auth/login:
+    post:
+      tags: [Auth]
+      summary: Login with email/phone and password
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginRequest"
+      responses:
+        "200":
+          description: Authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthTokens"
+  /auth/refresh:
+    post:
+      tags: [Auth]
+      summary: Refresh access token
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [refresh_token]
+              properties:
+                refresh_token:
+                  type: string
+      responses:
+        "200":
+          description: Refreshed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthTokens"
+  /auth/change-password:
+    post:
+      tags: [Auth]
+      summary: Change password for current authenticated user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [old_password, new_password]
+              properties:
+                old_password: { type: string }
+                new_password: { type: string, minLength: 8 }
+      responses:
+        "200":
+          description: Password changed and new tokens issued
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthTokens"
+  /auth/request-reset:
+    post:
+      tags: [Auth]
+      summary: "Request password reset token (dev: token returned in response)"
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [login]
+              properties:
+                login: { type: string, description: email or phone }
+      responses:
+        "200":
+          description: Reset token issued if account exists
+  /auth/reset-password:
+    post:
+      tags: [Auth]
+      summary: Reset password with reset token
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [reset_token, new_password]
+              properties:
+                reset_token: { type: string }
+                new_password: { type: string, minLength: 8 }
+      responses:
+        "200":
+          description: Password reset and tokens issued
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthTokens"
+  /auth/admin-bootstrap:
+    post:
+      tags: [Auth]
+      summary: Create first admin account (only when no admin exists)
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegisterRequest"
+      responses:
+        "201":
+          description: Admin created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthTokens"
+  /auth/logout:
+    post:
+      tags: [Auth]
+      summary: Revoke current session/token
+      responses:
+        "200":
+          description: Logged out
+  /users:
+    get:
+      tags: [Users]
+      summary: List users (admin)
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: User list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  rows:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/User"
+  /users/{user_id}:
+    get:
+      tags: [Users]
+      summary: Get user by ID (admin)
+      parameters:
+        - $ref: "#/components/parameters/UserId"
+      responses:
+        "200":
+          description: User details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+    patch:
+      tags: [Users]
+      summary: Update user role/status (admin)
+      parameters:
+        - $ref: "#/components/parameters/UserId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                role:
+                  type: string
+                  enum: [guest, user, admin]
+                is_active:
+                  type: boolean
+      responses:
+        "200":
+          description: User updated
+    delete:
+      tags: [Users]
+      summary: Delete/deactivate user (admin)
+      parameters:
+        - $ref: "#/components/parameters/UserId"
+      responses:
+        "204":
+          description: User deleted
+  /me:
+    get:
+      tags: [Profile]
+      summary: Get current authenticated user
+      responses:
+        "200":
+          description: Current user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+  /me/profile:
+    get:
+      tags: [Profile]
+      summary: Get profile
+      responses:
+        "200":
+          description: Profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Profile"
+    put:
+      tags: [Profile]
+      summary: Replace profile
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProfileUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Profile"
+    patch:
+      tags: [Profile]
+      summary: Patch profile
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProfileUpdate"
+      responses:
+        "200":
+          description: Updated
+  /listings:
+    get:
+      tags: [Listings]
+      summary: Search and filter listings
+      parameters:
+        - in: query
+          name: search
+          schema: { type: string }
+        - in: query
+          name: make
+          schema: { type: string }
+        - in: query
+          name: class_name
+          schema: { type: string }
+        - in: query
+          name: model
+          schema: { type: string }
+        - in: query
+          name: city
+          schema: { type: string }
+        - in: query
+          name: sort
+          schema: { type: string }
+        - in: query
+          name: limit
+          schema: { type: integer, minimum: 1, maximum: 1000, default: 100 }
+        - in: query
+          name: deals_only
+          schema: { type: string, enum: ["0", "1"], default: "0" }
+        - in: query
+          name: min_year
+          schema: { type: integer }
+        - in: query
+          name: max_year
+          schema: { type: integer }
+        - in: query
+          name: min_price
+          schema: { type: number }
+        - in: query
+          name: max_price
+          schema: { type: number }
+        - in: query
+          name: min_km
+          schema: { type: number }
+        - in: query
+          name: max_km
+          schema: { type: number }
+        - in: query
+          name: min_discount_pct
+          schema: { type: number }
+        - in: query
+          name: max_discount_pct
+          schema: { type: number }
+        - in: query
+          name: min_peer_count
+          schema: { type: integer }
+        - in: query
+          name: max_peer_count
+          schema: { type: integer }
+      responses:
+        "200":
+          description: Listing search result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ListingsResponse"
+    post:
+      tags: [Listings]
+      summary: Create listing
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ListingCreate"
+      responses:
+        "201":
+          description: Listing created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Listing"
+  /listings/{product_id}:
+    get:
+      tags: [Listings]
+      summary: Get listing by ID
+      parameters:
+        - $ref: "#/components/parameters/ProductId"
+      responses:
+        "200":
+          description: Listing
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Listing"
+    put:
+      tags: [Listings]
+      summary: Replace listing
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ProductId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ListingCreate"
+      responses:
+        "200":
+          description: Listing updated
+    patch:
+      tags: [Listings]
+      summary: Patch listing
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ProductId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ListingUpdate"
+      responses:
+        "200":
+          description: Listing updated
+    delete:
+      tags: [Listings]
+      summary: Delete listing
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ProductId"
+      responses:
+        "204":
+          description: Listing removed
+  /uploads:
+    post:
+      tags: [Listings]
+      summary: Upload a file blob (base64)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [filename, content_base64]
+              properties:
+                filename: { type: string }
+                mime_type: { type: string }
+                content_base64: { type: string }
+      responses:
+        "201":
+          description: Uploaded
+  /favorites:
+    get:
+      tags: [Listings]
+      summary: Get favorites for current actor (token) or user_key
+      parameters:
+        - in: query
+          name: user_key
+          schema: { type: string }
+      responses:
+        "200":
+          description: Favorite rows
+    post:
+      tags: [Listings]
+      summary: Add listing to favorites
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [product_id]
+              properties:
+                product_id: { type: string }
+                user_key: { type: string }
+      responses:
+        "201":
+          description: Favorite created
+  /favorites/{id}:
+    delete:
+      tags: [Listings]
+      summary: Remove favorite by id
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+        - in: query
+          name: user_key
+          schema: { type: string }
+      responses:
+        "204":
+          description: Favorite removed
+  /summary:
+    get:
+      tags: [Insights]
+      summary: Dashboard summary
+      responses:
+        "200":
+          description: Summary stats
+  /ranges:
+    get:
+      tags: [Insights]
+      summary: Filter ranges
+      responses:
+        "200":
+          description: Ranges for UI sliders
+  /value-estimate:
+    get:
+      tags: [Insights]
+      summary: Estimate low/fair/high value from comparable cars
+      parameters:
+        - in: query
+          name: make
+          required: true
+          schema: { type: string }
+        - in: query
+          name: class_name
+          required: true
+          schema: { type: string }
+        - in: query
+          name: model
+          schema: { type: string }
+        - in: query
+          name: year
+          required: true
+          schema: { type: integer }
+        - in: query
+          name: km
+          required: true
+          schema: { type: number }
+      responses:
+        "200":
+          description: Value band
+  /alerts:
+    get:
+      tags: [Alerts]
+      summary: Get saved alerts for user key
+      parameters:
+        - in: query
+          name: user_key
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Alert list
+    post:
+      tags: [Alerts]
+      summary: Create alert from selected filters
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AlertCreate"
+      responses:
+        "200":
+          description: Created
+  /alerts/active:
+    post:
+      tags: [Alerts]
+      summary: Enable/disable alert
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [alert_id, active]
+              properties:
+                alert_id: { type: integer }
+                active: { type: boolean }
+      responses:
+        "200":
+          description: Updated
+  /notifications:
+    get:
+      tags: [Notifications]
+      summary: Get notifications
+      parameters:
+        - in: query
+          name: user_key
+          required: true
+          schema: { type: string }
+        - in: query
+          name: unread_only
+          schema: { type: string, enum: ["0", "1"], default: "0" }
+        - in: query
+          name: limit
+          schema: { type: integer, default: 50, minimum: 1, maximum: 200 }
+      responses:
+        "200":
+          description: Notification list
+  /notifications/mark-read:
+    post:
+      tags: [Notifications]
+      summary: Mark notifications as read
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                user_key: { type: string }
+                ids:
+                  type: array
+                  items: { type: integer }
+      responses:
+        "200":
+          description: Updated
+  /channels:
+    get:
+      tags: [Channels]
+      summary: Get channel config (WhatsApp) for user
+      parameters:
+        - in: query
+          name: user_key
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Channel status
+    post:
+      tags: [Channels]
+      summary: Upsert channel config (WhatsApp)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [user_key]
+              properties:
+                user_key: { type: string }
+                whatsapp_number: { type: string, example: "+97455551234" }
+                whatsapp_enabled: { type: boolean }
+      responses:
+        "200":
+          description: Saved
+  /channels/test-whatsapp:
+    post:
+      tags: [Channels]
+      summary: Send WhatsApp test message
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [user_key]
+              properties:
+                user_key: { type: string }
+      responses:
+        "200":
+          description: Test result
+  /push/public-key:
+    get:
+      tags: [Push]
+      summary: Get VAPID public key/config status
+      responses:
+        "200":
+          description: Push config
+  /push/status:
+    get:
+      tags: [Push]
+      summary: Get push subscription status for user
+      parameters:
+        - in: query
+          name: user_key
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Push status
+  /push/subscribe:
+    post:
+      tags: [Push]
+      summary: Upsert push subscription
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [user_key, subscription]
+              properties:
+                user_key: { type: string }
+                subscription:
+                  type: object
+                  properties:
+                    endpoint: { type: string }
+                    keys:
+                      type: object
+                      properties:
+                        p256dh: { type: string }
+                        auth: { type: string }
+      responses:
+        "200":
+          description: Subscribed
+  /push/unsubscribe:
+    post:
+      tags: [Push]
+      summary: Disable push subscription(s)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                user_key: { type: string }
+                endpoint: { type: string }
+      responses:
+        "200":
+          description: Unsubscribed
+  /push/test:
+    post:
+      tags: [Push]
+      summary: Send push test message
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [user_key]
+              properties:
+                user_key: { type: string }
+      responses:
+        "200":
+          description: Test result
+  /collector/run:
+    post:
+      tags: [Collector]
+      summary: Trigger incremental collector run
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Trigger result
+  /deals/recompute:
+    post:
+      tags: [Collector]
+      summary: Recompute and persist per-car deal metrics
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Recompute result
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok: { type: boolean }
+                  updated_rows: { type: integer }
+                  computed_at: { type: string, format: date-time }
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    guestToken:
+      type: apiKey
+      in: header
+      name: X-Guest-Token
+  parameters:
+    ProductId:
+      in: path
+      name: product_id
+      required: true
+      schema: { type: string }
+    UserId:
+      in: path
+      name: user_id
+      required: true
+      schema: { type: string }
+  schemas:
+    AuthTokens:
+      type: object
+      properties:
+        access_token: { type: string }
+        refresh_token: { type: string }
+        token_type: { type: string, example: Bearer }
+        expires_in: { type: integer, example: 3600 }
+    RegisterRequest:
+      type: object
+      required: [email, password, full_name]
+      properties:
+        email: { type: string, format: email }
+        password: { type: string, minLength: 8 }
+        full_name: { type: string }
+    LoginRequest:
+      type: object
+      required: [login, password]
+      properties:
+        login: { type: string, description: email or phone }
+        password: { type: string }
+    User:
+      type: object
+      properties:
+        id: { type: string }
+        role: { type: string, enum: [guest, user, admin] }
+        email: { type: string, format: email }
+        phone: { type: string }
+        full_name: { type: string }
+        is_active: { type: boolean }
+        created_at: { type: string, format: date-time }
+    Profile:
+      type: object
+      properties:
+        user_id: { type: string }
+        full_name: { type: string }
+        avatar_url: { type: string }
+        preferred_language: { type: string }
+        timezone: { type: string }
+        city: { type: string }
+    ProfileUpdate:
+      type: object
+      properties:
+        full_name: { type: string }
+        avatar_url: { type: string }
+        preferred_language: { type: string }
+        timezone: { type: string }
+        city: { type: string }
+    Listing:
+      type: object
+      properties:
+        product_id: { type: string }
+        title: { type: string }
+        price_qar: { type: number }
+        make: { type: string }
+        class_name: { type: string }
+        model: { type: string }
+        manufacture_year: { type: integer }
+        km: { type: integer }
+        warranty_status: { type: string }
+        cylinder_count: { type: integer }
+        seller_name: { type: string }
+        seller_phone: { type: string }
+        seller_type: { type: string }
+        seller_whatsapp: { type: string }
+        seller_user_id: { type: string }
+        is_company: { type: string, description: "'1' for company/dealer account in source payload" }
+        city: { type: string }
+        url: { type: string }
+        description: { type: string }
+        main_image_url: { type: string }
+        image_urls_json: { type: string, description: JSON array string from feed images }
+        all_image_urls_json: { type: string, description: JSON array string from detail endpoint images }
+        properties_json: { type: string, description: JSON array string of all listing properties/tags }
+        comments_count: { type: integer }
+        comments_json: { type: string, description: JSON array string of listing comments }
+        expected_price_qar: { type: number }
+        discount_qar: { type: number }
+        discount_pct: { type: number, description: Deal percentage for this car vs similar peers }
+        peer_count: { type: integer }
+        mileage_window_km: { type: integer }
+        deal_score: { type: number }
+        deal_reason: { type: string }
+        deal_last_computed_at: { type: string, format: date-time }
+        listing_date: { type: string, format: date }
+    ListingCreate:
+      type: object
+      required: [title, price_qar, make, class_name]
+      properties:
+        title: { type: string }
+        price_qar: { type: number }
+        make: { type: string }
+        class_name: { type: string }
+        model: { type: string }
+        manufacture_year: { type: integer }
+        km: { type: integer }
+        warranty_status: { type: string }
+        cylinder_count: { type: integer }
+        seller_name: { type: string }
+        seller_phone: { type: string }
+        seller_type: { type: string }
+        seller_whatsapp: { type: string }
+        seller_user_id: { type: string }
+        is_company: { type: string }
+        city: { type: string }
+        url: { type: string }
+        description: { type: string }
+        main_image_url: { type: string }
+        image_urls_json: { type: string }
+        all_image_urls_json: { type: string }
+        properties_json: { type: string }
+        comments_count: { type: integer }
+        comments_json: { type: string }
+    ListingUpdate:
+      type: object
+      properties:
+        title: { type: string }
+        price_qar: { type: number }
+        make: { type: string }
+        class_name: { type: string }
+        model: { type: string }
+        manufacture_year: { type: integer }
+        km: { type: integer }
+        warranty_status: { type: string }
+        cylinder_count: { type: integer }
+        seller_name: { type: string }
+        seller_phone: { type: string }
+        seller_type: { type: string }
+        seller_whatsapp: { type: string }
+        seller_user_id: { type: string }
+        is_company: { type: string }
+        city: { type: string }
+        url: { type: string }
+        description: { type: string }
+        main_image_url: { type: string }
+        image_urls_json: { type: string }
+        all_image_urls_json: { type: string }
+        properties_json: { type: string }
+        comments_count: { type: integer }
+        comments_json: { type: string }
+    ListingsResponse:
+      type: object
+      properties:
+        rows:
+          type: array
+          items:
+            $ref: "#/components/schemas/Listing"
+        makes:
+          type: array
+          items: { type: string }
+        classes:
+          type: array
+          items: { type: string }
+        models:
+          type: array
+          items: { type: string }
+        cities:
+          type: array
+          items: { type: string }
+    AlertCreate:
+      type: object
+      required: [user_key]
+      properties:
+        user_key: { type: string }
+        make: { type: string }
+        class_name: { type: string }
+        model: { type: string }
+        city: { type: string }
+        search_text: { type: string }
+        min_year: { type: integer }
+        max_year: { type: integer }
+        min_price_qar: { type: integer }
+        max_price_qar: { type: integer }
+        min_km: { type: integer }
+        max_km: { type: integer }
+        deals_only: { type: boolean }
+        min_discount_pct: { type: number }
+        max_discount_pct: { type: number }
+        min_peer_count: { type: integer }
+        max_peer_count: { type: integer }

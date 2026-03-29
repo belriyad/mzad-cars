@@ -20,7 +20,7 @@ export default function AdminUsersPage() {
   const [search, setSearch] = useState("");
 
   const { data, isLoading, isError } = useQuery({
-    queryKey: ["admin-users", token],
+    queryKey: ["admin-users"],
     queryFn: () => adminService.users(token),
     enabled: isAdmin,
   });

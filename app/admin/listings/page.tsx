@@ -34,7 +34,7 @@ export default function AdminListingsPage() {
   const [selected, setSelected] = useState<Set<string>>(new Set());
 
   const { data, isLoading, isError } = useQuery({
-    queryKey: ["admin-all-listings", token],
+    queryKey: ["admin-all-listings"],
     queryFn: () => adminService.listAll({ limit: 1000 }, token),
     enabled: isAdmin,
   });

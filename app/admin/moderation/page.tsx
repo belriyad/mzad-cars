@@ -11,7 +11,7 @@ export default function ModerationQueuePage() {
   const { token, isAdmin } = useAdminAuth();
 
   const query = useQuery({
-    queryKey: ["admin-moderation", token],
+    queryKey: ["admin-moderation"],
     queryFn: () => adminService.moderationQueue(token),
     enabled: isAdmin,
   });

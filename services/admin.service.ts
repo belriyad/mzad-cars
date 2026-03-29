@@ -2,12 +2,12 @@
  * Admin service — wraps all admin/moderation API calls.
  *
  * Endpoint notes (from swagger-3.yaml):
- *  GET  /listings               — all listings (no auth required, but we pass token for future)
- *  PATCH /listings/{product_id} — update any field including is_approved
- *  GET  /users                  — list users (admin bearer required)
- *  PATCH /users/{user_id}       — update role / is_active
- *  DELETE /users/{user_id}      — deactivate user
- *  GET  /summary                — dashboard KPI stats
+ *  GET  /listings                              — all listings (is_approved=any requires admin bearer)
+ *  POST /admin/listings/{product_id}/approval  — approve/reject a listing {is_approved: boolean}
+ *  GET  /users                                 — list users (admin bearer required)
+ *  PATCH /users/{user_id}                      — update role / is_active
+ *  DELETE /users/{user_id}                     — deactivate user
+ *  GET  /summary                               — dashboard KPI stats
  */
 import { apiRequest } from "@/lib/http";
 import type { Listing, ListingFilters, User, SummaryResponse } from "@/types/domain";
@@ -26,14 +26,14 @@ export const adminService = {
   stats: (token?: string) =>
     apiRequest<SummaryResponse>("/summary", { token }),
 
-  /** All listings regardless of approval status */
+  /** All listings regardless of approval status (requires admin bearer token) */
   listAll: (filters?: ListingFilters, token?: string) =>
-    apiRequest<ListingsResponse>(`/listings?${toQS(filters)}`, { token }),
+    apiRequest<ListingsResponse>(`/listings?is_approved=any&${toQS(filters)}`, { token }),
 
-  /** Approve or reject a single listing */
+  /** Approve or reject a single listing via the dedicated approval endpoint */
   setApproval: (productId: string, approved: boolean, token?: string) =>
-    apiRequest<Listing>(`/listings/${productId}`, {
-      method: "PATCH",
+    apiRequest<{ ok: boolean; listing: Listing }>(`/admin/listings/${productId}/approval`, {
+      method: "POST",
       body: { is_approved: approved },
       token,
     }),
@@ -45,8 +45,8 @@ export const adminService = {
   bulkSetApproval: async (ids: string[], approved: boolean, token?: string) => {
     await Promise.all(
       ids.map((id) =>
-        apiRequest<Listing>(`/listings/${id}`, {
-          method: "PATCH",
+        apiRequest<{ ok: boolean; listing: Listing }>(`/admin/listings/${id}/approval`, {
+          method: "POST",
           body: { is_approved: approved },
           token,
         })
@@ -72,8 +72,8 @@ export const adminService = {
 
   /** Legacy shim — still consumed by /admin/moderation page */
   moderationQueue: async (token?: string) => {
-    const res = await apiRequest<ListingsResponse>("/listings?limit=100", { token });
-    return res.rows.filter((r) => r.is_approved === null || r.is_approved === undefined);
+    const res = await apiRequest<ListingsResponse>("/listings?is_approved=any&limit=100", { token });
+    return res.rows.filter((r) => r.is_approved === null || r.is_approved === undefined || r.is_approved === false);
   },
 };
 

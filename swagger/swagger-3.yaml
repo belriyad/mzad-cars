@@ -8,6 +8,8 @@ info:
 servers:
   - url: http://localhost:8090/api
     description: Local development
+  - url: http://192.168.1.149:8090/api
+    description: LAN backend
 tags:
   - name: Auth
   - name: Users
@@ -293,6 +295,12 @@ paths:
       summary: Search and filter listings
       parameters:
         - in: query
+          name: source
+          schema:
+            type: string
+            enum: [all, mzad, qatarliving]
+          description: Filter by marketplace source
+        - in: query
           name: search
           schema: { type: string }
         - in: query
@@ -346,6 +354,18 @@ paths:
         - in: query
           name: max_peer_count
           schema: { type: integer }
+        - in: query
+          name: include_unapproved
+          schema: { type: string, enum: ["0", "1"], default: "0" }
+          description: Admin only. Include listings with is_approved=false.
+        - in: query
+          name: is_approved
+          schema: { type: string, enum: ["0", "1", "any"], default: "1" }
+          description: |
+            Approval filter.
+            `1` = approved only (public default),
+            `0` = unapproved only (admin),
+            `any` = all listings regardless of approval (admin).
       responses:
         "200":
           description: Listing search result
@@ -377,6 +397,10 @@ paths:
       summary: Get listing by ID
       parameters:
         - $ref: "#/components/parameters/ProductId"
+        - in: query
+          name: include_unapproved
+          schema: { type: string, enum: ["0", "1"], default: "0" }
+          description: Admin only. Include listing even when is_approved=false.
       responses:
         "200":
           description: Listing
@@ -493,6 +517,59 @@ paths:
       responses:
         "200":
           description: Summary stats
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  totalListings: { type: integer }
+                  topMakes:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        name: { type: string }
+                        count: { type: integer }
+                  phoneStats:
+                    type: object
+                    properties:
+                      listingsWithPhone: { type: integer }
+                      uniquePhoneNumbers: { type: integer }
+                      coveragePct: { type: number, format: float }
+                  approvalStats:
+                    type: object
+                    properties:
+                      approved: { type: integer }
+                      pending: { type: integer }
+                  sourceStats:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        source: { type: string, enum: [mzad, qatarliving] }
+                        listings: { type: integer }
+                        listingsWithPhone: { type: integer }
+                        uniquePhoneNumbers: { type: integer }
+                  collectionRunStats:
+                    type: object
+                    properties:
+                      totalRuns: { type: integer }
+                      totalNewRows: { type: integer }
+                      totalPagesScanned: { type: integer }
+                      lastFinishedAt: { type: string, nullable: true }
+                      avgNewRowsPerRun: { type: number, format: float }
+                  collectionRuns:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id: { type: integer }
+                        startedAt: { type: string, nullable: true }
+                        finishedAt: { type: string, nullable: true }
+                        durationSeconds: { type: integer, nullable: true }
+                        pagesScanned: { type: integer }
+                        newRows: { type: integer }
+                        notes: { type: string }
   /ranges:
     get:
       tags: [Insights]
@@ -751,6 +828,34 @@ paths:
                   ok: { type: boolean }
                   updated_rows: { type: integer }
                   computed_at: { type: string, format: date-time }
+  /admin/listings/{product_id}/approval:
+    post:
+      tags: [Listings]
+      summary: Admin flip listing approval flag
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ProductId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [is_approved]
+              properties:
+                is_approved: { type: boolean }
+      responses:
+        "200":
+          description: Approval updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok: { type: boolean }
+                  listing:
+                    $ref: "#/components/schemas/Listing"
 components:
   securitySchemes:
     bearerAuth:
@@ -856,6 +961,7 @@ components:
         deal_score: { type: number }
         deal_reason: { type: string }
         deal_last_computed_at: { type: string, format: date-time }
+        is_approved: { type: boolean, description: True when owner/admin has approved listing for public visibility }
         listing_date: { type: string, format: date }
     ListingCreate:
       type: object

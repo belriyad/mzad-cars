@@ -162,7 +162,7 @@ export interface ListingFilters {
   limit?: number;
   offset?: number; // for pagination / infinite scroll
   /** Filter by approval status. "1" = approved only, "0" = rejected only */
-  is_approved?: "0" | "1";
+  is_approved?: "0" | "1" | "any";
 }
 
 // ── Profile ────────────────────────────────────────────────────────────────

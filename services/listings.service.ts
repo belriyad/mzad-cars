@@ -12,17 +12,15 @@ function toQueryString(filters: ListingFilters = {}) {
 }
 
 export const listingsService = {
-  /**
-   * Public feed.
-   * NOTE: Once listings are approved in the DB, add `is_approved=1&` back before the
-   * toQueryString call to filter to approved-only. Currently omitted because the backend
-   * defaults to is_approved=true and no listings have been approved yet, making the site empty.
-   */
+  /** Public feed — approved listings only (is_approved=1 is the backend default for authed and unauthed). */
   list: (filters?: ListingFilters) =>
-    apiRequest<ListingsResponse>(`/listings?${toQueryString(filters)}`),
-  /** Admin-only: fetch ALL listings regardless of approval status */
+    apiRequest<ListingsResponse>(`/listings?is_approved=1&${toQueryString(filters)}`),
+  /**
+   * Admin-only: fetch ALL listings regardless of approval status.
+   * Requires a valid bearer token; the backend returns 401 without one for is_approved=any.
+   */
   listAll: (filters?: ListingFilters, token?: string) =>
-    apiRequest<ListingsResponse>(`/listings?${toQueryString(filters)}`, { token }),
+    apiRequest<ListingsResponse>(`/listings?is_approved=any&${toQueryString(filters)}`, { token }),
   getById: (productId: string) => apiRequest<Listing>(`/listings/${productId}`),
   create: (body: Partial<Listing>, token?: string) =>
     apiRequest<Listing>("/listings", { method: "POST", body, token }),

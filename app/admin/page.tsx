@@ -60,19 +60,19 @@ export default function AdminDashboard() {
   const stats = useQuery({
     queryKey: ["admin-stats"],
     queryFn: () => adminService.stats(token),
-    enabled: isAdmin,
+    enabled: isAdmin && !!token,
   });
 
   const allListings = useQuery({
     queryKey: ["admin-all-listings-count"],
     queryFn: () => adminService.listAll({ limit: 1000 }, token),
-    enabled: isAdmin,
+    enabled: isAdmin && !!token,
   });
 
   const users = useQuery({
     queryKey: ["admin-users-count"],
     queryFn: () => adminService.users(token),
-    enabled: isAdmin,
+    enabled: isAdmin && !!token,
   });
 
   const listings = allListings.data?.rows ?? [];

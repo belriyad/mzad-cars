@@ -36,7 +36,7 @@ export default function AdminListingsPage() {
   const { data, isLoading, isError } = useQuery({
     queryKey: ["admin-all-listings"],
     queryFn: () => adminService.listAll({ limit: 1000 }, token),
-    enabled: isAdmin,
+    enabled: isAdmin && !!token,
   });
 
   const approveMutation = useMutation({

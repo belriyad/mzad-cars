@@ -22,7 +22,7 @@ export default function AdminUsersPage() {
   const { data, isLoading, isError } = useQuery({
     queryKey: ["admin-users"],
     queryFn: () => adminService.users(token),
-    enabled: isAdmin,
+    enabled: isAdmin && !!token,
   });
 
   const updateMutation = useMutation({

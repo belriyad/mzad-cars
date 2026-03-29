@@ -13,7 +13,7 @@ export default function ModerationQueuePage() {
   const query = useQuery({
     queryKey: ["admin-moderation"],
     queryFn: () => adminService.moderationQueue(token),
-    enabled: isAdmin,
+    enabled: isAdmin && !!token,
   });
 
   return (

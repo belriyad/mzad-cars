@@ -23,12 +23,16 @@ function toQS(filters: ListingFilters = {}) {
 
 export const adminService = {
   /** Dashboard KPIs */
-  stats: (token?: string) =>
-    apiRequest<SummaryResponse>("/summary", { token }),
+  stats: (token?: string) => {
+    if (!token) throw new Error("admin token required for stats");
+    return apiRequest<SummaryResponse>("/summary", { token });
+  },
 
   /** All listings regardless of approval status (requires admin bearer token) */
-  listAll: (filters?: ListingFilters, token?: string) =>
-    apiRequest<ListingsResponse>(`/listings?is_approved=any&${toQS(filters)}`, { token }),
+  listAll: (filters?: ListingFilters, token?: string) => {
+    if (!token) throw new Error("admin token required for listAll");
+    return apiRequest<ListingsResponse>(`/listings?is_approved=any&${toQS(filters)}`, { token });
+  },
 
   /** Approve or reject a single listing via the dedicated approval endpoint */
   setApproval: (productId: string, approved: boolean, token?: string) =>
@@ -72,6 +76,7 @@ export const adminService = {
 
   /** Legacy shim — still consumed by /admin/moderation page */
   moderationQueue: async (token?: string) => {
+    if (!token) throw new Error("admin token required for moderationQueue");
     const res = await apiRequest<ListingsResponse>("/listings?is_approved=any&limit=100", { token });
     return res.rows.filter((r) => r.is_approved === null || r.is_approved === undefined || r.is_approved === false);
   },

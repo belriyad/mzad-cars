@@ -5,7 +5,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { adminService } from "@/services/admin.service";
-import { useAuthStore } from "@/store/auth-store";
+import { useAdminAuth } from "@/hooks/use-admin-auth";
 import type { User } from "@/types/domain";
 
 const ROLE_COLORS: Record<string, string> = {
@@ -15,14 +15,14 @@ const ROLE_COLORS: Record<string, string> = {
 };
 
 export default function AdminUsersPage() {
-  const token = useAuthStore((s) => s.accessToken) ?? undefined;
+  const { token, isAdmin } = useAdminAuth();
   const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
 
   const { data, isLoading, isError } = useQuery({
     queryKey: ["admin-users", token],
     queryFn: () => adminService.users(token),
-    enabled: Boolean(token),
+    enabled: isAdmin,
   });
 
   const updateMutation = useMutation({

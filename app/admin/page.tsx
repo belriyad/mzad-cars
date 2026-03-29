@@ -6,7 +6,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { RoleGate } from "@/components/auth/role-gate";
 import { adminService } from "@/services/admin.service";
-import { useAuthStore } from "@/store/auth-store";
+import { useAdminAuth } from "@/hooks/use-admin-auth";
 
 const NAV_TILES = [
   {
@@ -55,24 +55,24 @@ function StatCard({
 }
 
 export default function AdminDashboard() {
-  const token = useAuthStore((s) => s.accessToken);
+  const { token, isAdmin } = useAdminAuth();
 
   const stats = useQuery({
     queryKey: ["admin-stats", token],
-    queryFn: () => adminService.stats(token ?? undefined),
-    enabled: Boolean(token),
+    queryFn: () => adminService.stats(token),
+    enabled: isAdmin,
   });
 
   const allListings = useQuery({
     queryKey: ["admin-all-listings-count", token],
-    queryFn: () => adminService.listAll({ limit: 1000 }, token ?? undefined),
-    enabled: Boolean(token),
+    queryFn: () => adminService.listAll({ limit: 1000 }, token),
+    enabled: isAdmin,
   });
 
   const users = useQuery({
     queryKey: ["admin-users-count", token],
-    queryFn: () => adminService.users(token ?? undefined),
-    enabled: Boolean(token),
+    queryFn: () => adminService.users(token),
+    enabled: isAdmin,
   });
 
   const listings = allListings.data?.rows ?? [];

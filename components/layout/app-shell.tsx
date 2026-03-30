@@ -5,25 +5,29 @@ import { usePathname } from "next/navigation";
 import { APP_NAME } from "@/lib/constants";
 import { MobileNav } from "@/components/layout/mobile-nav";
 import { LanguageModal } from "@/components/common/language-modal";
+import { AccountMenu } from "@/components/layout/account-menu";
 import { useAuthStore } from "@/store/auth-store";
-import { Button } from "@/components/ui/button";
-import { authService } from "@/services/auth.service";
-import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
 const NAV_LINKS = [
-  { href: "/",              label: "Home"         },
-  { href: "/listings",      label: "Browse"       },
-  { href: "/sell",          label: "Sell"         },
-  { href: "/dealer-signup", label: "For Dealers"  },
-  { href: "/pricing",       label: "Pricing"      },
+  { href: "/",              label: "Home"        },
+  { href: "/listings",      label: "Browse"      },
+  { href: "/sell",          label: "Sell"        },
+  { href: "/dealer-signup", label: "For Dealers" },
+  { href: "/pricing",       label: "Pricing"     },
 ];
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const token = useAuthStore((s) => s.accessToken);
   const user = useAuthStore((s) => s.user);
-  const logout = useAuthStore((s) => s.logout);
+  const role = user?.role ?? "guest";
+
+  // Hide public nav links that are role-redundant when logged in as dealer/admin
+  const visibleLinks = NAV_LINKS.filter(({ href }) => {
+    if (href === "/dealer-signup" && (role === "dealer" || role === "admin")) return false;
+    if (href === "/sell" && role === "admin") return false;
+    return true;
+  });
 
   return (
     <>
@@ -33,7 +37,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             {APP_NAME}
           </Link>
           <nav className="hidden items-center gap-1 text-sm text-neutral-600 md:flex">
-            {NAV_LINKS.map(({ href, label }) => {
+            {visibleLinks.map(({ href, label }) => {
               const active = href === "/" ? pathname === "/" : pathname.startsWith(href);
               return (
                 <Link
@@ -50,49 +54,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 </Link>
               );
             })}
-            {token ? (
-              <>
-                <Link
-                  href="/profile"
-                  className={cn(
-                    "rounded-full px-3 py-1.5 transition",
-                    pathname.startsWith("/profile")
-                      ? "bg-neutral-900 text-white"
-                      : "hover:bg-neutral-100 text-neutral-600"
-                  )}
-                >
-                  {user?.full_name?.split(" ")[0] ?? "Profile"}
-                </Link>
-                <Button
-                  size="sm"
-                  variant="secondary"
-                  onClick={async () => {
-                    try {
-                      await authService.logout(useAuthStore.getState().accessToken ?? undefined);
-                    } catch {
-                      // ignore logout errors, clear local session anyway
-                    } finally {
-                      logout();
-                      toast.success("Signed out");
-                    }
-                  }}
-                >
-                  Logout
-                </Button>
-              </>
-            ) : (
-              <Link
-                href="/login"
-                className={cn(
-                  "rounded-full px-3 py-1.5 transition",
-                  pathname === "/login"
-                    ? "bg-neutral-900 text-white"
-                    : "hover:bg-neutral-100"
-                )}
-              >
-                Login
-              </Link>
-            )}
+            <AccountMenu />
           </nav>
         </div>
       </header>

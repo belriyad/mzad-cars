@@ -27,6 +27,7 @@ const QUICK_LINKS = [
     label: "Inventory",
     description: "Manage and publish your car stock",
     color: "bg-blue-50 text-blue-700",
+    beta: false,
   },
   {
     href: "/dealer/analytics",
@@ -34,6 +35,7 @@ const QUICK_LINKS = [
     label: "Analytics",
     description: "Views, leads, and conversion metrics",
     color: "bg-emerald-50 text-emerald-700",
+    beta: false,
   },
   {
     href: "/dealer/team",
@@ -41,6 +43,7 @@ const QUICK_LINKS = [
     label: "Team",
     description: "Invite staff and manage permissions",
     color: "bg-purple-50 text-purple-700",
+    beta: true,
   },
   {
     href: "/dealer/csv-import",
@@ -48,6 +51,7 @@ const QUICK_LINKS = [
     label: "CSV Import",
     description: "Bulk-upload listings from a spreadsheet",
     color: "bg-amber-50 text-amber-700",
+    beta: true,
   },
   {
     href: "/dealer/profile",
@@ -55,6 +59,7 @@ const QUICK_LINKS = [
     label: "Dealer Profile",
     description: "Showroom name, logo, and contact info",
     color: "bg-rose-50 text-rose-700",
+    beta: false,
   },
 ];
 
@@ -125,14 +130,21 @@ export default function DealerDashboardPage() {
             Quick actions
           </h2>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {QUICK_LINKS.map(({ href, icon: Icon, label, description, color }) => (
+            {QUICK_LINKS.map(({ href, icon: Icon, label, description, color, beta }) => (
               <Link key={href} href={href}>
                 <Card className="group flex items-start gap-3 transition hover:shadow-md">
                   <span className={`mt-0.5 rounded-xl p-2 ${color}`}>
                     <Icon className="h-4 w-4" />
                   </span>
-                  <div>
-                    <p className="font-medium text-neutral-800 group-hover:text-neutral-900">{label}</p>
+                  <div className="min-w-0">
+                    <p className="flex items-center gap-2 font-medium text-neutral-800 group-hover:text-neutral-900">
+                      {label}
+                      {beta && (
+                        <Badge className="bg-amber-100 text-amber-700 text-[10px] px-1.5 py-0 leading-4">
+                          Beta
+                        </Badge>
+                      )}
+                    </p>
                     <p className="text-xs text-neutral-500">{description}</p>
                   </div>
                 </Card>

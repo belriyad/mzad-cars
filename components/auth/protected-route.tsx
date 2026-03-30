@@ -32,7 +32,13 @@ export function ProtectedRoute({ allowRoles = ["user", "dealer", "admin"], child
   }, [allowRoles, hydrated, pathname, router, token, user]);
 
   if (!hydrated) {
-    return <Card className="animate-pulse bg-neutral-100">Loading session…</Card>;
+    return (
+      <div className="space-y-3 p-4">
+        <div className="h-7 w-40 animate-pulse rounded-xl bg-neutral-100" />
+        <div className="h-20 animate-pulse rounded-2xl bg-neutral-100" />
+        <div className="h-20 animate-pulse rounded-2xl bg-neutral-100" />
+      </div>
+    );
   }
 
   if (!token || !user || !allowRoles.includes(user.role)) return null;

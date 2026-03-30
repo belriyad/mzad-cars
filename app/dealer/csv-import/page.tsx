@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 
 type RowStatus = "ok" | "warn" | "error";
 interface PreviewRow {
@@ -70,11 +71,25 @@ export default function DealerCsvImportPage() {
     <div className="space-y-6">
       {/* header */}
       <div>
-        <h1 className="text-2xl font-semibold">CSV bulk import</h1>
+        <h1 className="flex items-center gap-2 text-2xl font-semibold">
+          CSV bulk import
+          <Badge className="bg-amber-100 text-amber-700">Beta</Badge>
+        </h1>
         <p className="mt-0.5 text-sm text-neutral-500">
-          Upload a spreadsheet to publish multiple listings at once. Download our template to get started.
+          Upload a spreadsheet to publish multiple listings at once. Download our template to get
+          started.
         </p>
       </div>
+
+      {/* beta notice */}
+      <Card className="flex items-start gap-3 border-amber-200 bg-amber-50 text-amber-800">
+        <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
+        <p className="text-sm">
+          <span className="font-semibold">Preview only —</span> the import pipeline is not yet
+          connected to the backend. Reviewing your CSV here will not create any listings. Full
+          import will be available in the next release.
+        </p>
+      </Card>
 
       {/* template download */}
       <Card className="flex flex-wrap items-center justify-between gap-4 bg-neutral-50">
@@ -152,17 +167,18 @@ export default function DealerCsvImportPage() {
           </div>
 
           {done ? (
-            <div className="flex items-center gap-2 text-sm text-emerald-700 font-medium">
-              <CheckCircle2 className="h-4 w-4" /> {okCount} listings imported successfully!
+            <div className="flex items-center gap-2 text-sm text-amber-700 font-medium">
+              <AlertCircle className="h-4 w-4" /> Preview only — no listings were created (backend not yet connected).
             </div>
           ) : (
             <Button
               onClick={handleImport}
               disabled={importing || okCount === 0}
               className="gap-2"
+              title="Full import coming soon"
             >
               <Upload className="h-4 w-4" />
-              {importing ? "Importing…" : `Import ${okCount} valid listings`}
+              {importing ? "Validating…" : `Preview ${okCount} valid rows`}
             </Button>
           )}
         </div>

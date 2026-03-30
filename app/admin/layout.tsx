@@ -64,8 +64,16 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const hydrated = useAuthStore((s) => s.hydrated);
   const token = useAuthStore((s) => s.accessToken);
 
-  // Not loaded yet
-  if (!hydrated) return null;
+  // Not loaded yet — show a skeleton instead of null/blank
+  if (!hydrated) {
+    return (
+      <div className="space-y-4 p-4">
+        <div className="h-8 w-48 animate-pulse rounded-xl bg-neutral-100" />
+        <div className="h-24 animate-pulse rounded-2xl bg-neutral-100" />
+        <div className="h-24 animate-pulse rounded-2xl bg-neutral-100" />
+      </div>
+    );
+  }
 
   // Not logged in — ProtectedRoute handles redirect
   if (!token || !user) {

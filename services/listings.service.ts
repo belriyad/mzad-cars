@@ -21,7 +21,8 @@ export const listingsService = {
    */
   listAll: (filters?: ListingFilters, token?: string) =>
     apiRequest<ListingsResponse>(`/listings?is_approved=any&${toQueryString(filters)}`, { token }),
-  getById: (productId: string) => apiRequest<Listing>(`/listings/${productId}`),
+  getById: (productId: string, token?: string) =>
+    apiRequest<Listing>(`/listings/${productId}`, { token }),
   create: (body: Partial<Listing>, token?: string) =>
     apiRequest<Listing>("/listings", { method: "POST", body, token }),
   update: (productId: string, body: Partial<Listing>, token?: string) =>

@@ -10,7 +10,6 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ImageCarousel } from "@/components/listings/image-carousel";
 import { adminService } from "@/services/admin.service";
-import { listingsService } from "@/services/listings.service";
 import { useAdminAuth } from "@/hooks/use-admin-auth";
 import { parseImageUrls, parseProperties } from "@/types/domain";
 import { formatCurrencyQAR } from "@/lib/utils";
@@ -29,9 +28,16 @@ export default function AdminReviewPage({
   const { isAdmin, token: adminToken } = useAdminAuth();
 
   // ── fetch listing ──────────────────────────────────────────────────────
+  // The backend /listings/:id returns 404 for unapproved listings, so we
+  // fetch via the admin list endpoint with is_approved=any and match by ID.
   const { data: listing, isLoading, isError } = useQuery({
-    queryKey: ["listing", productId],
-    queryFn: () => listingsService.getById(productId),
+    queryKey: ["admin-listing-review", productId],
+    queryFn: async () => {
+      const res = await adminService.listAll({ is_approved: "any", limit: 500 }, adminToken);
+      const found = res.rows.find((r) => r.product_id === productId);
+      if (!found) throw new Error("listing not found");
+      return found;
+    },
     enabled: isAdmin && !!adminToken,
   });
 

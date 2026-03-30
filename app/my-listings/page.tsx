@@ -13,8 +13,8 @@ import { useAuthStore } from "@/store/auth-store";
 import { formatCurrencyQAR } from "@/lib/utils";
 import type { Listing } from "@/types/domain";
 
-function approvalStatus(listing: Listing) {
-  if (listing.is_approved === true)  return "active";
+function approvalStatus(listing: Listing): import("@/types/domain").ListingStatus {
+  if (listing.is_approved === true)  return "approved";
   if (listing.is_approved === false) return "rejected";
   return "pending_review";
 }

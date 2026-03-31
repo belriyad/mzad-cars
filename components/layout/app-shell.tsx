@@ -6,13 +6,17 @@ import { APP_NAME } from "@/lib/constants";
 import { MobileNav } from "@/components/layout/mobile-nav";
 import { LanguageModal } from "@/components/common/language-modal";
 import { AccountMenu } from "@/components/layout/account-menu";
+import { CompareBar } from "@/components/listings/compare-bar";
 import { useAuthStore } from "@/store/auth-store";
 import { cn } from "@/lib/utils";
 
 const NAV_LINKS = [
   { href: "/",              label: "Home"        },
   { href: "/listings",      label: "Browse"      },
+  { href: "/drops",         label: "Price Drops" },
   { href: "/sell",          label: "Sell"        },
+  { href: "/pulse",         label: "Market Pulse"},
+  { href: "/spotted",       label: "Spotted"     },
   { href: "/dealer-signup", label: "For Dealers" },
   { href: "/pricing",       label: "Pricing"     },
 ];
@@ -59,6 +63,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </div>
       </header>
       <main className="mx-auto w-full max-w-6xl flex-1 px-4 pb-24 pt-4 md:pb-8">{children}</main>
+      <CompareBar />
       <MobileNav />
       <LanguageModal />
     </>

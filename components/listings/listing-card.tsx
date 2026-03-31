@@ -6,6 +6,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ImageCarousel } from "@/components/listings/image-carousel";
+import { CompareCheckbox } from "@/components/listings/compare-bar";
 import { formatCurrencyQAR } from "@/lib/utils";
 import { LockedValuation } from "@/components/common/locked-valuation";
 
@@ -146,6 +147,10 @@ export function ListingCard({
             <Button className="w-full rounded-2xl">View details</Button>
           </Link>
         )}
+      </div>
+
+      <div className="flex justify-end pt-0.5">
+        <CompareCheckbox productId={listing.product_id} />
       </div>
     </Card>
   );

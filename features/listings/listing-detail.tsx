@@ -11,6 +11,8 @@ import { Badge } from "@/components/ui/badge";
 import { ImageCarousel } from "@/components/listings/image-carousel";
 import { useEntitlement } from "@/hooks/use-entitlement";
 import { LockedValuation } from "@/components/common/locked-valuation";
+import { WatchButton } from "@/components/listings/watch-button";
+import { CostCalculator } from "@/components/listings/cost-calculator";
 import { formatCurrencyQAR } from "@/lib/utils";
 
 export function ListingDetail({
@@ -269,7 +271,10 @@ export function ListingDetail({
             View original listing source ↗
           </a>
         )}
+        <WatchButton listing={listing} />
       </Card>
+
+      <CostCalculator listing={listing} />
     </div>
   );
 }

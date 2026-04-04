@@ -24,11 +24,10 @@ import { listingsService } from "@/services/listings.service";
 import { formatCurrencyQAR } from "@/lib/utils";
 
 const schema = z.object({
-  make:       z.string().min(1, "Required"),
-  class_name: z.string().min(1, "Required"),
-  model:      z.string().optional(),
-  year:       z.coerce.number().min(1990).max(2030),
-  km:         z.coerce.number().min(0),
+  make:  z.string().min(1, "Required"),
+  model: z.string().optional(),
+  year:  z.coerce.number().min(1990).max(2030),
+  km:    z.coerce.number().min(0),
 });
 
 type FormValues = z.infer<typeof schema>;
@@ -88,19 +87,18 @@ const SELECT_CLS =
 export function CarWorthWidget() {
   const [submitted, setSubmitted] = useState(false);
 
-  // global filter options (makes + classes)
+  // global filter options (makes only)
   const filterQuery = useQuery({
     queryKey: ["listing-filter-options"],
     queryFn: () => listingsService.list({ limit: 1 }),
     staleTime: 60 * 60_000,
   });
-  const makes   = filterQuery.data?.makes   ?? [];
-  const classes = filterQuery.data?.classes ?? [];
+  const makes = filterQuery.data?.makes ?? [];
 
   const form = useForm<FormValues>({
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     resolver: zodResolver(schema) as any,
-    defaultValues: { make: "", class_name: "", model: "", year: 2021, km: 50_000 },
+    defaultValues: { make: "", model: "", year: 2021, km: 50_000 },
   });
 
   // watch the make field so model dropdown updates reactively
@@ -215,7 +213,7 @@ export function CarWorthWidget() {
             {/* CTA row */}
             <div className="flex gap-2 pt-1">
               <Link
-                href={`/listings?make=${encodeURIComponent(watchValues.make)}&class_name=${encodeURIComponent(watchValues.class_name)}&model=${encodeURIComponent(watchValues.model ?? "")}`}
+                href={`/listings?make=${encodeURIComponent(watchValues.make)}&model=${encodeURIComponent(watchValues.model ?? "")}`}
                 className="flex-1"
               >
                 <Button size="sm" className="w-full" variant="default">
@@ -276,23 +274,7 @@ export function CarWorthWidget() {
               )}
             </div>
 
-            {/* 3. Body type */}
-            <div className="relative">
-              <select
-                {...form.register("class_name")}
-                disabled={classes.length === 0}
-                className={SELECT_CLS}
-              >
-                <option value="">{classes.length === 0 ? "Loading…" : "Select body type…"}</option>
-                {classes.map((c) => <option key={c} value={c}>{c}</option>)}
-              </select>
-              <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-neutral-400" />
-              {form.formState.errors.class_name && (
-                <p className="mt-0.5 text-xs text-rose-500">{form.formState.errors.class_name.message}</p>
-              )}
-            </div>
-
-            {/* 4. Year + KM */}
+            {/* 3. Year + KM */}
             <div className="grid grid-cols-2 gap-2">
               <div>
                 <Input

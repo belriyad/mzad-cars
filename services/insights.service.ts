@@ -13,17 +13,17 @@ export const insightsService = {
   /** GET /value-estimate — estimate car value from comparable peers */
   valueEstimate: (query: {
     make: string;
-    class_name: string;
+    class_name?: string;
     model?: string;
     year: number;
     km: number;
   }) => {
     const params = new URLSearchParams({
       make: query.make,
-      class_name: query.class_name,
       year: String(query.year),
       km: String(query.km),
     });
+    if (query.class_name) params.set("class_name", query.class_name);
     if (query.model) params.set("model", query.model);
     return apiRequest<ValueEstimateResponse>(`/value-estimate?${params.toString()}`);
   },

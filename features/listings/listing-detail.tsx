@@ -13,6 +13,7 @@ import { useEntitlement } from "@/hooks/use-entitlement";
 import { LockedValuation } from "@/components/common/locked-valuation";
 import { WatchButton } from "@/components/listings/watch-button";
 import { CostCalculator } from "@/components/listings/cost-calculator";
+import { PeerPricingPanel } from "@/components/listings/peer-pricing-panel";
 import { formatCurrencyQAR } from "@/lib/utils";
 
 export function ListingDetail({
@@ -229,6 +230,9 @@ export function ListingDetail({
           <LockedValuation />
         )}
       </Card>
+
+      {/* peer pricing rationale + similar cars */}
+      {entitlements.canSeeValuationOnListings && <PeerPricingPanel listing={listing} />}
 
       {/* description */}
       {listing.description && (

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import Link from "next/link";
@@ -24,45 +24,47 @@ import { listingsService } from "@/services/listings.service";
 import { formatCurrencyQAR } from "@/lib/utils";
 
 const schema = z.object({
-  make: z.string().min(1, "Required"),
+  make:       z.string().min(1, "Required"),
   class_name: z.string().min(1, "Required"),
-  model: z.string().optional(),
-  year: z.coerce.number().min(1990).max(2030),
-  km: z.coerce.number().min(0),
+  model:      z.string().optional(),
+  year:       z.coerce.number().min(1990).max(2030),
+  km:         z.coerce.number().min(0),
 });
 
 type FormValues = z.infer<typeof schema>;
 
-// ── Animated number ──────────────────────────────────────────────────────────
-function AnimatedPrice({ value, className }: { value: number; className?: string }) {
-  return (
-    <span className={className}>
-      {formatCurrencyQAR(value)}
-    </span>
-  );
+/** Never renders QAR NaN — returns null if the value is missing/invalid */
+function safeQAR(value: number | null | undefined): string | null {
+  if (value == null || !isFinite(value) || value <= 0) return null;
+  return formatCurrencyQAR(Math.round(value));
 }
 
-// ── Gauge bar ────────────────────────────────────────────────────────────────
-function ValueGauge({ low, fair, high, confidence }: { low: number; fair: number; high: number; confidence?: number }) {
+// ── Gauge bar ──────────────────────────────────────────────────────────────────────────────
+function ValueGauge({
+  low, fair, high, confidence,
+}: {
+  low: number; fair: number; high: number; confidence?: number;
+}) {
   const range = high - low;
-  const fairPct = range > 0 ? ((fair - low) / range) * 100 : 50;
+  const validRange = isFinite(range) && range > 0;
+  const fairPct = validRange
+    ? Math.min(100, Math.max(0, ((fair - low) / range) * 100))
+    : 50;
 
   return (
     <div className="space-y-2">
-      {/* bar */}
       <div className="relative h-3 overflow-hidden rounded-full bg-gradient-to-r from-emerald-200 via-amber-200 to-rose-200">
-        {/* fair value marker */}
         <div
           className="absolute top-1/2 h-5 w-1 -translate-y-1/2 rounded-full bg-neutral-800 shadow"
           style={{ left: `calc(${fairPct}% - 2px)` }}
         />
       </div>
       <div className="flex justify-between text-[10px] text-neutral-400">
-        <span>Low {formatCurrencyQAR(low)}</span>
-        <span className="text-neutral-600 font-medium">Fair {formatCurrencyQAR(fair)}</span>
-        <span>High {formatCurrencyQAR(high)}</span>
+        <span>Low {safeQAR(low) ?? "—"}</span>
+        <span className="font-medium text-neutral-600">Fair {safeQAR(fair) ?? "—"}</span>
+        <span>High {safeQAR(high) ?? "—"}</span>
       </div>
-      {confidence !== undefined && (
+      {confidence != null && isFinite(confidence) && confidence > 0 && (
         <div className="flex items-center gap-2 pt-0.5">
           <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-neutral-100">
             <div
@@ -79,36 +81,63 @@ function ValueGauge({ low, fair, high, confidence }: { low: number; fair: number
   );
 }
 
+// ── Widget ───────────────────────────────────────────────────────────────────────────────────
+const SELECT_CLS =
+  "w-full appearance-none rounded-xl border border-neutral-200 bg-white px-3 py-2.5 pr-8 text-sm text-neutral-800 focus:border-neutral-400 focus:outline-none disabled:opacity-40 disabled:cursor-not-allowed";
+
 export function CarWorthWidget() {
   const [submitted, setSubmitted] = useState(false);
 
-  // fetch filter options for smart dropdowns
+  // global filter options (makes + classes)
   const filterQuery = useQuery({
     queryKey: ["listing-filter-options"],
     queryFn: () => listingsService.list({ limit: 1 }),
     staleTime: 60 * 60_000,
   });
-  const makes = filterQuery.data?.makes ?? [];
+  const makes   = filterQuery.data?.makes   ?? [];
   const classes = filterQuery.data?.classes ?? [];
 
   const form = useForm<FormValues>({
-    resolver: zodResolver(schema) as any, // eslint-disable-line @typescript-eslint/no-explicit-any
-    defaultValues: { make: "", class_name: "SUV", model: "", year: 2021, km: 50000 },
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    resolver: zodResolver(schema) as any,
+    defaultValues: { make: "", class_name: "", model: "", year: 2021, km: 50_000 },
   });
+
+  // watch the make field so model dropdown updates reactively
+  const selectedMake = useWatch({ control: form.control, name: "make" });
+
+  // models filtered to the selected make
+  const modelsQuery = useQuery({
+    queryKey: ["models-for-make", selectedMake],
+    queryFn: () => listingsService.list({ make: selectedMake, limit: 1 }),
+    staleTime: 30 * 60_000,
+    enabled: !!selectedMake,
+  });
+  const models = modelsQuery.data?.models ?? [];
 
   const mutation = useMutation({
     mutationFn: valuationService.estimate,
     onSuccess: () => setSubmitted(true),
   });
 
-  const onSubmit = (values: FormValues) => mutation.mutate(values);
+  // when make changes, clear the model field
+  const handleMakeChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    form.setValue("make", e.target.value);
+    form.setValue("model", "");
+  };
 
-  const result = mutation.data;
-  const watchValues = form.watch();
+  const watchValues  = form.watch();
+  const result       = mutation.data;
+
+  // safe result values — guard against NaN / null / 0 from the API
+  const fairVal  = result && isFinite(result.fair)  && result.fair  > 0 ? result.fair  : null;
+  const lowVal   = result && isFinite(result.low)   && result.low   > 0 ? result.low   : null;
+  const highVal  = result && isFinite(result.high)  && result.high  > 0 ? result.high  : null;
+  const hasValidResult = fairVal !== null;
 
   return (
     <Card className="flex h-full flex-col space-y-0 overflow-hidden p-0">
-      {/* header */}
+      {/* dark header */}
       <div className="bg-gradient-to-br from-neutral-900 to-neutral-800 px-5 pt-5 pb-4 text-white">
         <div className="flex items-center gap-2">
           <BarChart2 className="h-4 w-4 text-amber-400" />
@@ -118,49 +147,64 @@ export function CarWorthWidget() {
         </div>
         <h3 className="mt-1.5 text-xl font-bold">What is your car worth?</h3>
         <p className="mt-0.5 text-xs text-neutral-400">
-          Based on {10000}+ live listings in Qatar &mdash; updated daily
+          Based on 10,000+ live listings in Qatar — updated daily
         </p>
       </div>
 
       <div className="flex flex-1 flex-col gap-4 p-5">
-        {/* result panel */}
+
+        {/* ── RESULT PANEL ── */}
         {result && submitted ? (
           <div className="space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs text-neutral-500">Market value for your car</p>
-                <p className="text-3xl font-extrabold text-neutral-900 tracking-tight">
-                  <AnimatedPrice value={result.fair} />
+            {hasValidResult ? (
+              <>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs text-neutral-500">Market value for your car</p>
+                    <p className="text-3xl font-extrabold tracking-tight text-neutral-900">
+                      {safeQAR(fairVal)}
+                    </p>
+                  </div>
+                  <div className="flex flex-col items-center rounded-2xl bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-700">
+                    <Sparkles className="mb-0.5 h-4 w-4" />
+                    Fair price
+                  </div>
+                </div>
+
+                {lowVal && highVal && (
+                  <ValueGauge
+                    low={lowVal}
+                    fair={fairVal!}
+                    high={highVal}
+                    confidence={result.confidence}
+                  />
+                )}
+
+                <div className="flex flex-wrap gap-2">
+                  {lowVal && safeQAR(lowVal * 1.02) && (
+                    <span className="flex items-center gap-1 rounded-full bg-teal-50 px-2.5 py-1 text-xs font-medium text-teal-700">
+                      <TrendingDown className="h-3 w-3" />
+                      Sell fast: {safeQAR(lowVal * 1.02)}
+                    </span>
+                  )}
+                  {highVal && safeQAR(highVal * 0.97) && (
+                    <span className="flex items-center gap-1 rounded-full bg-blue-50 px-2.5 py-1 text-xs font-medium text-blue-700">
+                      <TrendingUp className="h-3 w-3" />
+                      Max out: {safeQAR(highVal * 0.97)}
+                    </span>
+                  )}
+                </div>
+              </>
+            ) : (
+              /* no peers — friendly message instead of NaN */
+              <div className="rounded-2xl bg-amber-50 px-4 py-5 text-center space-y-1">
+                <p className="font-semibold text-amber-800">Not enough data yet</p>
+                <p className="text-xs text-amber-700">
+                  We don’t have enough comparable listings for this combination.
+                  Try removing the model or adjusting the year.
                 </p>
               </div>
-              <div className={`flex flex-col items-center rounded-2xl px-3 py-2 text-xs font-semibold ${
-                result.fair > 0 ? "bg-emerald-50 text-emerald-700" : "bg-neutral-100 text-neutral-600"
-              }`}>
-                <Sparkles className="h-4 w-4 mb-0.5" />
-                Fair price
-              </div>
-            </div>
-
-            <ValueGauge
-              low={result.low}
-              fair={result.fair}
-              high={result.high}
-              confidence={result.confidence}
-            />
-
-            {/* insight chip */}
-            <div className="flex flex-wrap gap-2">
-              {result.fair - result.low > 0 && (
-                <span className="flex items-center gap-1 rounded-full bg-teal-50 px-2.5 py-1 text-xs font-medium text-teal-700">
-                  <TrendingDown className="h-3 w-3" />
-                  Sell fast: list at {formatCurrencyQAR(Math.round(result.low * 1.02))}
-                </span>
-              )}
-              <span className="flex items-center gap-1 rounded-full bg-blue-50 px-2.5 py-1 text-xs font-medium text-blue-700">
-                <TrendingUp className="h-3 w-3" />
-                Max out: list at {formatCurrencyQAR(Math.round(result.high * 0.97))}
-              </span>
-            </div>
+            )}
 
             {/* CTA row */}
             <div className="flex gap-2 pt-1">
@@ -181,55 +225,68 @@ export function CarWorthWidget() {
               </Button>
             </div>
           </div>
+
         ) : (
-          /* form */
-          <form
-            className="space-y-2.5"
-            onSubmit={form.handleSubmit(onSubmit)}
-          >
-            {/* make */}
+          /* ── FORM ── */
+          <form className="space-y-2.5" onSubmit={form.handleSubmit((v) => mutation.mutate(v))}>
+
+            {/* 1. Make */}
             <div className="relative">
-              {makes.length > 0 ? (
-                <>
-                  <select
-                    {...form.register("make")}
-                    className="w-full appearance-none rounded-xl border border-neutral-200 bg-white px-3 py-2.5 pr-8 text-sm text-neutral-800 focus:border-neutral-400 focus:outline-none"
-                  >
-                    <option value="">Select make…</option>
-                    {makes.map((m) => <option key={m} value={m}>{m}</option>)}
-                  </select>
-                  <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-neutral-400" />
-                </>
-              ) : (
-                <Input placeholder="Make (Toyota, BMW…)" {...form.register("make")} />
-              )}
+              <select
+                {...form.register("make")}
+                onChange={handleMakeChange}
+                disabled={makes.length === 0}
+                className={SELECT_CLS}
+              >
+                <option value="">{makes.length === 0 ? "Loading makes…" : "Select make…"}</option>
+                {makes.map((m) => <option key={m} value={m}>{m}</option>)}
+              </select>
+              <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-neutral-400" />
               {form.formState.errors.make && (
                 <p className="mt-0.5 text-xs text-rose-500">{form.formState.errors.make.message}</p>
               )}
             </div>
 
-            {/* body type */}
+            {/* 2. Model — filtered to selected make */}
             <div className="relative">
-              {classes.length > 0 ? (
+              {models.length > 0 ? (
                 <>
-                  <select
-                    {...form.register("class_name")}
-                    className="w-full appearance-none rounded-xl border border-neutral-200 bg-white px-3 py-2.5 pr-8 text-sm text-neutral-800 focus:border-neutral-400 focus:outline-none"
-                  >
-                    <option value="">Select body type…</option>
-                    {classes.map((c) => <option key={c} value={c}>{c}</option>)}
+                  <select {...form.register("model")} className={SELECT_CLS}>
+                    <option value="">Any model</option>
+                    {models.map((m) => <option key={m} value={m}>{m}</option>)}
                   </select>
                   <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-neutral-400" />
                 </>
               ) : (
-                <Input placeholder="Body type (SUV, Sedan…)" {...form.register("class_name")} />
+                <Input
+                  placeholder={
+                    !selectedMake          ? "Select a make first…"
+                    : modelsQuery.isLoading ? "Loading models…"
+                    :                        "Model (optional — broadens estimate)"
+                  }
+                  disabled={!selectedMake || modelsQuery.isLoading}
+                  {...form.register("model")}
+                />
               )}
             </div>
 
-            {/* model */}
-            <Input placeholder="Model (optional)" {...form.register("model")} />
+            {/* 3. Body type */}
+            <div className="relative">
+              <select
+                {...form.register("class_name")}
+                disabled={classes.length === 0}
+                className={SELECT_CLS}
+              >
+                <option value="">{classes.length === 0 ? "Loading…" : "Select body type…"}</option>
+                {classes.map((c) => <option key={c} value={c}>{c}</option>)}
+              </select>
+              <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-neutral-400" />
+              {form.formState.errors.class_name && (
+                <p className="mt-0.5 text-xs text-rose-500">{form.formState.errors.class_name.message}</p>
+              )}
+            </div>
 
-            {/* year + km side by side */}
+            {/* 4. Year + KM */}
             <div className="grid grid-cols-2 gap-2">
               <div>
                 <Input
@@ -246,19 +303,14 @@ export function CarWorthWidget() {
                 <Gauge className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-neutral-400" />
                 <Input
                   type="number"
-                  placeholder="Km"
+                  placeholder="Km driven"
                   {...form.register("km")}
                   className="pl-8"
                 />
               </div>
             </div>
 
-            <Button
-              type="submit"
-              className="w-full"
-              disabled={mutation.isPending}
-              variant="premium"
-            >
+            <Button type="submit" className="w-full" disabled={mutation.isPending} variant="premium">
               {mutation.isPending ? (
                 <span className="flex items-center gap-2">
                   <RefreshCw className="h-4 w-4 animate-spin" /> Calculating…

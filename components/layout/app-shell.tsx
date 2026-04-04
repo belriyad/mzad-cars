@@ -16,7 +16,7 @@ const NAV_LINKS = [
   { href: "/drops",         label: "Price Drops" },
   { href: "/sell",          label: "Sell"        },
   { href: "/pulse",         label: "Market Pulse"},
-  { href: "/spotted",       label: "Spotted"     },
+  { href: "/spotted",       label: "Hidden Gems" },
   { href: "/dealer-signup", label: "For Dealers" },
   { href: "/pricing",       label: "Pricing"     },
 ];

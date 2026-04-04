@@ -106,14 +106,20 @@ export function CarWorthWidget() {
   // watch the make field so model dropdown updates reactively
   const selectedMake = useWatch({ control: form.control, name: "make" });
 
-  // models filtered to the selected make
+  // models derived from actual rows for this make — backend models[] is global, not filtered
   const modelsQuery = useQuery({
     queryKey: ["models-for-make", selectedMake],
-    queryFn: () => listingsService.list({ make: selectedMake, limit: 1 }),
+    queryFn: () => listingsService.list({ make: selectedMake, limit: 500 }),
     staleTime: 30 * 60_000,
     enabled: !!selectedMake,
   });
-  const models = modelsQuery.data?.models ?? [];
+  const models = Array.from(
+    new Set(
+      (modelsQuery.data?.rows ?? [])
+        .map((r) => (r.model ?? "").trim())
+        .filter(Boolean)
+    )
+  ).sort();
 
   const mutation = useMutation({
     mutationFn: valuationService.estimate,

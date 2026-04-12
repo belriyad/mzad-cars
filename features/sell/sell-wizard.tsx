@@ -1,11 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useRouter } from "next/navigation";
-import { CheckCircle2, Loader2 } from "lucide-react";
+import { CheckCircle2, ImagePlus, Loader2, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -33,13 +33,21 @@ type ListingFormInput = z.input<typeof listingSchema>;
 type ListingForm = z.output<typeof listingSchema>;
 
 const CITIES = ["Doha", "Al Rayyan", "Al Wakrah", "Lusail", "Al Khor", "Umm Salal"];
+const MAX_PHOTOS = 10;
+
+interface PhotoPreview {
+  file: File;
+  url: string;
+}
 
 export function SellWizard() {
   const router  = useRouter();
-  const [step, setStep]           = useState(1);
-  const [ocrResult, setOcrResult] = useState<OCRExtractionResult | null>(null);
-  const [submitting, setSubmitting] = useState(false);
-  const [submitted, setSubmitted]   = useState(false);
+  const [step, setStep]               = useState(1);
+  const [ocrResult, setOcrResult]     = useState<OCRExtractionResult | null>(null);
+  const [photos, setPhotos]           = useState<PhotoPreview[]>([]);
+  const [submitting, setSubmitting]   = useState(false);
+  const [submitted, setSubmitted]     = useState(false);
+  const photoInputRef                 = useRef<HTMLInputElement>(null);
   const { tier, entitlements } = useEntitlement();
   const token = useAuthStore((s) => s.accessToken) ?? undefined;
 
@@ -78,7 +86,7 @@ export function SellWizard() {
           Your listing is pending admin review. You will be notified once approved.
         </p>
         <div className="flex gap-2 flex-wrap justify-center">
-          <Button onClick={() => { setSubmitted(false); setStep(1); form.reset(); }}>
+          <Button onClick={() => { setSubmitted(false); setStep(1); form.reset(); setPhotos([]); }}>
             List another car
           </Button>
           <Button variant="secondary" onClick={() => router.push("/my-listings")}>
@@ -89,7 +97,25 @@ export function SellWizard() {
     );
   }
 
-  const steps = ["Seller context", "Registration card", "Car details", "Review & submit"];
+  const steps = ["Seller context", "Registration card", "Car details", "Photos", "Review & submit"];
+
+  const handlePhotoAdd = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files ?? []);
+    const remaining = MAX_PHOTOS - photos.length;
+    const toAdd = files.slice(0, remaining).map((file) => ({
+      file,
+      url: URL.createObjectURL(file),
+    }));
+    setPhotos((prev) => [...prev, ...toAdd]);
+    e.target.value = "";
+  };
+
+  const removePhoto = (idx: number) => {
+    setPhotos((prev) => {
+      URL.revokeObjectURL(prev[idx].url);
+      return prev.filter((_, i) => i !== idx);
+    });
+  };
 
   return (
     <div className="space-y-4">
@@ -213,12 +239,78 @@ export function SellWizard() {
             </div>
           </div>
           <Button onClick={() => form.trigger().then((ok) => { if (ok) setStep(4); })}>
-            Continue to review
+            Continue to photos
           </Button>
         </Card>
       )}
 
       {step === 4 && (
+        <Card className="space-y-4">
+          <div>
+            <h2 className="font-semibold">Car photos</h2>
+            <p className="text-sm text-neutral-500 mt-0.5">
+              Add up to {MAX_PHOTOS} photos. Listings with 5+ images get 3× more leads.
+            </p>
+          </div>
+
+          {/* photo grid */}
+          {photos.length > 0 && (
+            <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
+              {photos.map((p, idx) => (
+                <div key={p.url} className="relative group aspect-square rounded-xl overflow-hidden bg-neutral-100">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={p.url} alt={`Photo ${idx + 1}`} className="h-full w-full object-cover" />
+                  <button
+                    onClick={() => removePhoto(idx)}
+                    className="absolute top-1 right-1 rounded-full bg-black/60 p-1 text-white opacity-0 group-hover:opacity-100 transition"
+                    type="button"
+                    aria-label="Remove photo"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </button>
+                  {idx === 0 && (
+                    <span className="absolute bottom-1 left-1 rounded-md bg-black/60 px-1.5 py-0.5 text-[10px] text-white font-medium">Cover</span>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* add button */}
+          {photos.length < MAX_PHOTOS && (
+            <div>
+              <input
+                ref={photoInputRef}
+                type="file"
+                accept="image/*"
+                multiple
+                className="hidden"
+                onChange={handlePhotoAdd}
+              />
+              <button
+                type="button"
+                onClick={() => photoInputRef.current?.click()}
+                className="flex w-full flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-neutral-200 py-10 text-neutral-400 transition hover:border-neutral-400 hover:bg-neutral-50"
+              >
+                <ImagePlus className="h-7 w-7" />
+                <span className="text-sm font-medium">
+                  {photos.length === 0 ? "Click to add photos" : `Add more · ${photos.length}/${MAX_PHOTOS}`}
+                </span>
+                <span className="text-xs">JPG, PNG, WEBP · max 10 MB each</span>
+              </button>
+            </div>
+          )}
+
+          <div className="flex gap-2">
+            <Button onClick={() => setStep(5)}>
+              {photos.length === 0 ? "Skip photos" : `Continue with ${photos.length} photo${photos.length !== 1 ? "s" : ""}`}
+            </Button>
+            <Button variant="secondary" onClick={() => setStep(3)}>Back</Button>
+          </div>
+        </Card>
+      )}
+
+      {step === 5 && (
         <Card className="space-y-4">
           <h2 className="font-semibold">Review your listing</h2>
           <dl className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
@@ -231,6 +323,17 @@ export function SellWizard() {
           </dl>
           {form.getValues("description") && (
             <p className="text-sm text-neutral-600 border-t border-neutral-100 pt-3">{form.getValues("description")}</p>
+          )}
+          {photos.length > 0 && (
+            <div className="border-t border-neutral-100 pt-3">
+              <p className="text-xs text-neutral-400 mb-2">{photos.length} photo{photos.length !== 1 ? "s" : ""} attached</p>
+              <div className="flex gap-2 flex-wrap">
+                {photos.map((p) => (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img key={p.url} src={p.url} alt="" className="h-14 w-14 rounded-lg object-cover" />
+                ))}
+              </div>
+            </div>
           )}
           <div className="flex gap-2 flex-wrap">
             <Button
@@ -251,7 +354,8 @@ export function SellWizard() {
             >
               {submitting ? <><Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> Submitting…</> : "Submit for admin review"}
             </Button>
-            <Button variant="secondary" onClick={() => setStep(3)}>Edit</Button>
+            <Button variant="secondary" onClick={() => setStep(4)}>Edit photos</Button>
+            <Button variant="secondary" onClick={() => setStep(3)}>Edit details</Button>
           </div>
         </Card>
       )}

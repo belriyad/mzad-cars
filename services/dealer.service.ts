@@ -9,9 +9,8 @@
  *  - POST  /listings                                   — create listing
  *  - DELETE /listings/:id                              — remove listing
  */
-import { apiRequest } from "@/lib/http";
 import { listingsService } from "@/services/listings.service";
-import type { Listing, SummaryResponse } from "@/types/domain";
+import type { Listing } from "@/types/domain";
 
 export const dealerService = {
   /**
@@ -26,15 +25,22 @@ export const dealerService = {
     return response.rows;
   },
 
-  /** Dashboard KPIs from /summary */
-  analytics: async (token?: string) => {
-    const summary = await apiRequest<SummaryResponse>("/summary", { token }).catch(() => null);
+  /**
+   * Dashboard KPIs — scoped to this dealer's own listings.
+   * inventoryCount is derived from the dealer's filtered inventory, NOT /summary
+   * (which returns platform-wide totals and would show e.g. 25,681).
+   */
+  analytics: async (userId?: string, token?: string) => {
+    const inv = await listingsService.list(
+      { limit: 200, ...(userId ? { seller_user_id: userId } : {}) },
+      token,
+    ).catch(() => null);
     return {
-      views: 0,
-      leads: 0,
-      inventoryCount: summary?.totalListings ?? 0,
-      approvedCount: summary?.approvalStats?.approved ?? 0,
-      pendingCount: summary?.approvalStats?.pending ?? 0,
+      views: null as number | null,   // no dealer-scoped analytics endpoint yet
+      leads: null as number | null,
+      inventoryCount: inv?.rows?.length ?? 0,
+      approvedCount: inv?.rows?.filter((r) => r.is_approved).length ?? 0,
+      pendingCount: inv?.rows?.filter((r) => !r.is_approved).length ?? 0,
     };
   },
 

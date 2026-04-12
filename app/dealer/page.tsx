@@ -44,6 +44,7 @@ const QUICK_LINKS = [
     description: "Invite staff and manage permissions",
     color: "bg-purple-50 text-purple-700",
     beta: true,
+    locked: true,
   },
   {
     href: "/dealer/csv-import",
@@ -75,7 +76,7 @@ export default function DealerDashboardPage() {
 
   const analytics = useQuery({
     queryKey: ["dealer-analytics", user?.id],
-    queryFn: () => dealerService.analytics(token),
+    queryFn: () => dealerService.analytics(user?.id, token),
     enabled: !!token,
   });
 
@@ -112,10 +113,10 @@ export default function DealerDashboardPage() {
         {/* KPI strip */}
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
           {[
-            { label: "Active listings",  value: analytics.data?.inventoryCount ?? inventory.data?.length ?? "—" },
-            { label: "Total views",      value: analytics.data?.views ?? "—" },
-            { label: "Leads this month", value: analytics.data?.leads ?? "—" },
-            { label: "Avg. days live",   value: "12" },
+            { label: "My listings",      value: analytics.data?.inventoryCount ?? inventory.data?.length ?? "—" },
+            { label: "Pending review",   value: analytics.data?.pendingCount ?? "—" },
+            { label: "Total views",      value: "—" },
+            { label: "Avg. days live",   value: "—" },
           ].map(({ label, value }) => (
             <Card key={label} className="space-y-1">
               <p className="text-xs text-neutral-400">{label}</p>
@@ -130,9 +131,9 @@ export default function DealerDashboardPage() {
             Quick actions
           </h2>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {QUICK_LINKS.map(({ href, icon: Icon, label, description, color, beta }) => (
-              <Link key={href} href={href}>
-                <Card className="group flex items-start gap-3 transition hover:shadow-md">
+            {QUICK_LINKS.map(({ href, icon: Icon, label, description, color, beta, locked }) => {
+              const inner = (
+                <Card className={`group flex items-start gap-3 transition ${locked ? "opacity-60 cursor-not-allowed" : "hover:shadow-md"}`}>
                   <span className={`mt-0.5 rounded-xl p-2 ${color}`}>
                     <Icon className="h-4 w-4" />
                   </span>
@@ -141,15 +142,18 @@ export default function DealerDashboardPage() {
                       {label}
                       {beta && (
                         <Badge className="bg-amber-100 text-amber-700 text-[10px] px-1.5 py-0 leading-4">
-                          Beta
+                          {locked ? "Coming soon" : "Beta"}
                         </Badge>
                       )}
                     </p>
-                    <p className="text-xs text-neutral-500">{description}</p>
+                    <p className="text-xs text-neutral-500">{locked ? "Available in next release · Q3 2026" : description}</p>
                   </div>
                 </Card>
-              </Link>
-            ))}
+              );
+              return locked
+                ? <div key={href}>{inner}</div>
+                : <Link key={href} href={href}>{inner}</Link>;
+            })}
           </div>
         </div>
 
@@ -175,7 +179,10 @@ export default function DealerDashboardPage() {
                   </div>
                   <div className="flex shrink-0 flex-col items-end gap-1">
                     <p className="font-semibold">{formatCurrencyQAR(row.price_qar)}</p>
-                    <Badge className="bg-emerald-100 text-emerald-700 text-xs">Active</Badge>
+                    {row.is_approved
+                      ? <Badge className="bg-emerald-100 text-emerald-700 text-xs">Active</Badge>
+                      : <Badge className="bg-amber-100 text-amber-700 text-xs">Pending review</Badge>
+                    }
                   </div>
                 </Card>
               ))}

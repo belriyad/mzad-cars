@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useInfiniteQuery } from "@tanstack/react-query";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { listingsService } from "@/services/listings.service";
 import { ListingCard } from "@/components/listings/listing-card";
 import { useEntitlement } from "@/hooks/use-entitlement";
@@ -26,31 +26,40 @@ function useDebounce<T>(value: T, delay = 400): T {
 type SortOption = "discount_pct_desc" | "price_asc" | "price_desc" | "year_desc" | "km_asc";
 
 const SORT_LABELS: Record<SortOption, string> = {
-  discount_pct_desc: "Best deal %",
+  discount_pct_desc: "Best Value",
   price_asc:         "Price: low → high",
   price_desc:        "Price: high → low",
   year_desc:         "Newest year",
   km_asc:            "Lowest KM",
 };
 
-export function ListingsFeed() {
+export function ListingsFeed({
+  initialDealsOnly,
+}: {
+  initialDealsOnly?: boolean;
+} = {}) {
   const { entitlements } = useEntitlement();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const sentinelRef = useRef<HTMLDivElement>(null);
 
-  // ── Filter state ───────────────────────────────────────────────────────────
-  const [search, setSearch]       = useState("");
-  const [make, setMake]           = useState("");
-  const [className, setClassName] = useState("");
-  const [city, setCity]           = useState("");
-  const [dealsOnly, setDealsOnly] = useState(false);
-  const [sortBy, setSortBy]       = useState<SortOption>("discount_pct_desc");
-  const [minPrice, setMinPrice]   = useState("");
-  const [maxPrice, setMaxPrice]   = useState("");
-  const [minYear, setMinYear]     = useState("");
-  const [maxYear, setMaxYear]     = useState("");
-  const [minKm, setMinKm]         = useState("");
-  const [maxKm, setMaxKm]         = useState("");
+  // ── Filter state — seeded from URL params on first render ─────────────────
+  const [search, setSearch]       = useState(() => searchParams.get("q") ?? "");
+  const [make, setMake]           = useState(() => searchParams.get("make") ?? "");
+  const [className, setClassName] = useState(() => searchParams.get("class") ?? "");
+  const [city, setCity]           = useState(() => searchParams.get("city") ?? "");
+  const [dealsOnly, setDealsOnly] = useState(
+    () => initialDealsOnly ?? searchParams.get("deals") === "1"
+  );
+  const [sortBy, setSortBy]       = useState<SortOption>(
+    () => (searchParams.get("sort") as SortOption) ?? "discount_pct_desc"
+  );
+  const [minPrice, setMinPrice]   = useState(() => searchParams.get("min_price") ?? "");
+  const [maxPrice, setMaxPrice]   = useState(() => searchParams.get("max_price") ?? "");
+  const [minYear, setMinYear]     = useState(() => searchParams.get("min_year") ?? "");
+  const [maxYear, setMaxYear]     = useState(() => searchParams.get("max_year") ?? "");
+  const [minKm, setMinKm]         = useState(() => searchParams.get("min_km") ?? "");
+  const [maxKm, setMaxKm]         = useState(() => searchParams.get("max_km") ?? "");
   const [showAdvanced, setShowAdvanced] = useState(false);
 
   const debouncedSearch = useDebounce(search, 400);
@@ -221,7 +230,7 @@ export function ListingsFeed() {
           </select>
         </div>
 
-        {/* sort + quick toggles */}
+        {/* sort + toggles row */}
         <div className="flex flex-wrap items-center gap-2">
           <select
             value={sortBy}
@@ -232,14 +241,6 @@ export function ListingsFeed() {
               <option key={k} value={k}>Sort: {v}</option>
             ))}
           </select>
-          <Button
-            variant={dealsOnly ? "premium" : "secondary"}
-            size="sm"
-            onClick={() => setDealsOnly((v) => !v)}
-            type="button"
-          >
-            🏷 Top deals only{dealsOnly ? " ✓" : ""}
-          </Button>
           <Button variant="ghost" size="sm" type="button" onClick={() => setShowAdvanced((v) => !v)}>
             {showAdvanced ? "Hide filters ↑" : "More filters ↓"}
           </Button>

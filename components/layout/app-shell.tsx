@@ -11,14 +11,10 @@ import { useAuthStore } from "@/store/auth-store";
 import { cn } from "@/lib/utils";
 
 const NAV_LINKS = [
-  { href: "/",              label: "Home"        },
-  { href: "/listings",      label: "Browse"      },
-  { href: "/drops",         label: "Price Drops" },
-  { href: "/sell",          label: "Sell"        },
-  { href: "/pulse",         label: "Market Pulse"},
-  { href: "/spotted",       label: "Hidden Gems" },
-  { href: "/dealer-signup", label: "For Dealers" },
-  { href: "/pricing",       label: "Pricing"     },
+  { href: "/listings", label: "Browse"       },
+  { href: "/sell",     label: "Sell"         },
+  { href: "/pulse",    label: "Market Pulse" },
+  { href: "/pricing",  label: "Pricing"      },
 ];
 
 export function AppShell({ children }: { children: React.ReactNode }) {
@@ -26,9 +22,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const user = useAuthStore((s) => s.user);
   const role = user?.role ?? "guest";
 
-  // Hide public nav links that are role-redundant when logged in as dealer/admin
+  // Dealer/admin see their dashboard instead of sell
   const visibleLinks = NAV_LINKS.filter(({ href }) => {
-    if (href === "/dealer-signup" && (role === "dealer" || role === "admin")) return false;
     if (href === "/sell" && role === "admin") return false;
     return true;
   });

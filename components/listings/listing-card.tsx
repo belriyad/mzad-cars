@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ImageCarousel } from "@/components/listings/image-carousel";
 import { CompareCheckbox } from "@/components/listings/compare-bar";
+import { SaveLikeButtons } from "@/components/listings/save-like-buttons";
 import { formatCurrencyQAR } from "@/lib/utils";
 import { LockedValuation } from "@/components/common/locked-valuation";
 
@@ -149,8 +150,9 @@ export function ListingCard({
         )}
       </div>
 
-      <div className="flex justify-end pt-0.5">
+      <div className="flex items-center justify-between pt-0.5">
         <CompareCheckbox productId={listing.product_id} />
+        <SaveLikeButtons productId={listing.product_id} />
       </div>
     </Card>
   );

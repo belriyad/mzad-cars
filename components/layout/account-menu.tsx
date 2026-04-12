@@ -9,6 +9,7 @@ import {
   LogOut,
   Car,
   Heart,
+  Bookmark,
   Bell,
   BarChart2,
   Package,
@@ -65,7 +66,8 @@ export function AccountMenu() {
   // ── per-role menu items ──────────────────────────────────────────────────
   const commonItems: MenuItem[] = [
     { href: "/profile",       label: "My Profile",     icon: User       },
-    { href: "/favorites",     label: "Saved Cars",     icon: Heart      },
+    { href: "/favorites",     label: "Saved Cars",     icon: Bookmark   },
+    { href: "/liked",         label: "Liked Cars",     icon: Heart      },
     { href: "/notifications", label: "Notifications",  icon: Bell       },
   ];
 

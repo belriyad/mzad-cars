@@ -6,6 +6,7 @@ import {
   Building2,
   Car,
   Heart,
+  Bookmark,
   Home,
   User,
   LayoutDashboard,
@@ -26,15 +27,15 @@ const guestItems: NavItem[] = [
   { href: "/",              label: "Home",    icon: Home      },
   { href: "/listings",      label: "Browse",  icon: Car       },
   { href: "/dealer-signup", label: "Dealers", icon: Building2 },
-  { href: "/favorites",     label: "Saved",   icon: Heart     },
+  { href: "/liked",         label: "Liked",   icon: Heart     },
   { href: "/login",         label: "Login",   icon: User      },
 ];
 
 const userItems: NavItem[] = [
   { href: "/",              label: "Home",    icon: Home      },
   { href: "/listings",      label: "Browse",  icon: Car       },
-  { href: "/favorites",     label: "Saved",   icon: Heart     },
-  { href: "/notifications", label: "Alerts",  icon: Bell      },
+  { href: "/favorites",     label: "Saved",   icon: Bookmark  },
+  { href: "/liked",         label: "Liked",   icon: Heart     },
   { href: "/profile",       label: "Me",      icon: User      },
 ];
 

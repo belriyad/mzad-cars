@@ -12,6 +12,7 @@ import { ImageCarousel } from "@/components/listings/image-carousel";
 import { useEntitlement } from "@/hooks/use-entitlement";
 import { LockedValuation } from "@/components/common/locked-valuation";
 import { WatchButton } from "@/components/listings/watch-button";
+import { SaveLikeButtons } from "@/components/listings/save-like-buttons";
 import { CostCalculator } from "@/components/listings/cost-calculator";
 import { PeerPricingPanel } from "@/components/listings/peer-pricing-panel";
 import { formatCurrencyQAR } from "@/lib/utils";
@@ -276,6 +277,7 @@ export function ListingDetail({
           </a>
         )}
         <WatchButton listing={listing} />
+        <SaveLikeButtons productId={listing.product_id} showLabels className="justify-center" />
       </Card>
 
       <CostCalculator listing={listing} />

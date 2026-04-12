@@ -3,7 +3,8 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
-import { Gem, Share2, TrendingDown } from "lucide-react";
+import { Gem, RefreshCw, Share2, TrendingDown } from "lucide-react";
+import { insightsService } from "@/services/insights.service";
 import { listingsService } from "@/services/listings.service";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -146,18 +147,33 @@ type FilterKey = (typeof FILTERS)[number]["key"];
 export default function SpottedPage() {
   const [filter, setFilter] = useState<FilterKey>("all");
 
-  const query = useQuery({
-    queryKey: ["hidden-gems"],
-    queryFn: () => listingsService.list({ limit: 500 }),
+  // Try the dedicated /spotted endpoint first — it has backend-scored results
+  const spottedQuery = useQuery({
+    queryKey: ["spotted-api"],
+    queryFn: () => insightsService.spotted(),
     staleTime: 5 * 60_000,
   });
 
-  const scored = (query.data?.rows ?? [])
-    .map((l) => ({ listing: l, score: gemScore(l) }))
-    .filter(({ score: s }) => s >= 3)
-    .sort((a, b) => b.score - a.score)
-    .slice(0, 40)
-    .map(({ listing }) => listing);
+  // Fallback: compute client-side from full listings feed
+  const fallbackQuery = useQuery({
+    queryKey: ["hidden-gems-fallback"],
+    queryFn: () => listingsService.list({ limit: 500 }),
+    staleTime: 5 * 60_000,
+    enabled: spottedQuery.isError,
+  });
+
+  const isLoading = spottedQuery.isLoading || (spottedQuery.isError && fallbackQuery.isLoading);
+  const isError   = spottedQuery.isError && fallbackQuery.isError;
+
+  // Use backend results when available, otherwise fall back to local scoring
+  const scored: Listing[] = spottedQuery.data?.rows
+    ? spottedQuery.data.rows
+    : (fallbackQuery.data?.rows ?? [])
+        .map((l) => ({ listing: l, score: gemScore(l) }))
+        .filter(({ score: s }) => s >= 3)
+        .sort((a, b) => b.score - a.score)
+        .slice(0, 40)
+        .map(({ listing }) => listing);
 
   const filtered = scored.filter((l) => {
     if (filter === "new") return (l.km ?? Infinity) < 20_000;
@@ -196,14 +212,14 @@ export default function SpottedPage() {
             {label}
           </button>
         ))}
-        {!query.isLoading && (
+        {!isLoading && (
           <span className="ml-auto self-center text-xs text-neutral-400">
             {filtered.length} gem{filtered.length !== 1 ? "s" : ""}
           </span>
         )}
       </div>
 
-      {query.isLoading && (
+      {isLoading && (
         <div className="columns-2 md:columns-3 gap-4">
           {Array.from({ length: 9 }).map((_, i) => (
             <div key={i} className="break-inside-avoid mb-4 h-64 animate-pulse rounded-2xl bg-neutral-100" />
@@ -211,19 +227,19 @@ export default function SpottedPage() {
         </div>
       )}
 
-      {query.isError && (
+      {isError && (
         <Card className="py-16 text-center text-neutral-400">
           Could not load listings. Please try again.
         </Card>
       )}
 
-      {!query.isLoading && filtered.length === 0 && (
+      {!isLoading && filtered.length === 0 && (
         <Card className="py-16 text-center text-neutral-400">
           No gems matching this filter right now — try another or check back soon.
         </Card>
       )}
 
-      {!query.isLoading && filtered.length > 0 && (
+      {!isLoading && filtered.length > 0 && (
         <div className="columns-2 md:columns-3 gap-4">
           {filtered.map((l) => (
             <GemCard key={l.product_id} listing={l} />

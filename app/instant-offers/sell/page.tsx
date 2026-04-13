@@ -14,14 +14,18 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { formatCurrencyQAR } from "@/lib/utils";
+import { CAR_CATALOGUE, BODY_TYPES, CITIES_QA, YEARS, getModels, getTrims } from "@/lib/car-data";
 
 const CONDITIONS = ["excellent", "good", "fair", "poor"] as const;
-const CITIES = ["Doha", "Al Rayyan", "Al Wakrah", "Lusail", "Al Khor", "Umm Salal"];
+const COLORS = ["White", "Black", "Silver", "Grey", "Red", "Blue", "Brown", "Green", "Gold", "Beige", "Orange", "Other"];
+
+const SELECT_CLS = "w-full rounded-lg border border-neutral-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-neutral-300 disabled:opacity-40 disabled:cursor-not-allowed";
 
 const step1Schema = z.object({
   make:       z.string().min(1, "Required"),
   class_name: z.string().min(1, "Required"),
   model:      z.string().optional(),
+  trim:       z.string().optional(),
   year:       z.coerce.number().min(1990).max(2026),
   km:         z.coerce.number().min(0),
   color:      z.string().optional(),
@@ -54,6 +58,12 @@ export default function SellWithOffersPage() {
   const [step1Data, setStep1Data] = useState<Step1Output | null>(null);
   const [step2Data, setStep2Data] = useState<Step2Output | null>(null);
   const [requestUid, setRequestUid] = useState<string | null>(null);
+
+  // cascade state for Step 1
+  const [selectedMake, setSelectedMake] = useState("");
+  const [selectedModel, setSelectedModel] = useState("");
+  const models = getModels(selectedMake);
+  const trims  = getTrims(selectedMake, selectedModel);
 
   const form1 = useForm<Step1Input, unknown, Step1Output>({
     resolver: zodResolver(step1Schema),
@@ -123,46 +133,113 @@ export default function SellWithOffersPage() {
         ))}
       </div>
 
-      {/* Step 1 */}
       {step === 1 && (
         <Card className="space-y-4">
           <h2 className="font-semibold">Step 1 — Car details</h2>
           <div className="grid gap-3 sm:grid-cols-2">
+            {/* Make */}
             <div className="space-y-1">
               <label className="text-xs font-medium text-neutral-500">Make *</label>
-              <Input placeholder="Toyota" {...form1.register("make")} />
+              <select
+                {...form1.register("make")}
+                value={selectedMake}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  setSelectedMake(v);
+                  setSelectedModel("");
+                  form1.setValue("make", v);
+                  form1.setValue("model", "");
+                  form1.setValue("trim", "");
+                }}
+                className={SELECT_CLS}
+              >
+                <option value="">Select make…</option>
+                {CAR_CATALOGUE.map((m) => <option key={m.name} value={m.name}>{m.name}</option>)}
+              </select>
               {form1.formState.errors.make && <p className="text-xs text-red-500">{form1.formState.errors.make.message}</p>}
             </div>
+
+            {/* Body type */}
             <div className="space-y-1">
               <label className="text-xs font-medium text-neutral-500">Body type *</label>
-              <Input placeholder="SUV, Sedan…" {...form1.register("class_name")} />
+              <select {...form1.register("class_name")} className={SELECT_CLS}>
+                <option value="">Select body type…</option>
+                {BODY_TYPES.map((b) => <option key={b} value={b}>{b}</option>)}
+              </select>
+              {form1.formState.errors.class_name && <p className="text-xs text-red-500">{form1.formState.errors.class_name.message}</p>}
             </div>
+
+            {/* Model — cascades from make */}
             <div className="space-y-1">
               <label className="text-xs font-medium text-neutral-500">Model</label>
-              <Input placeholder="Camry, Patrol…" {...form1.register("model")} />
+              <select
+                {...form1.register("model")}
+                value={selectedModel}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  setSelectedModel(v);
+                  form1.setValue("model", v);
+                  form1.setValue("trim", "");
+                }}
+                disabled={!selectedMake}
+                className={SELECT_CLS}
+              >
+                <option value="">{!selectedMake ? "Select make first…" : "Select model…"}</option>
+                {models.map((m) => <option key={m} value={m}>{m}</option>)}
+              </select>
             </div>
+
+            {/* Trim — cascades from model */}
+            <div className="space-y-1">
+              <label className="text-xs font-medium text-neutral-500">Trim</label>
+              <select
+                {...form1.register("trim")}
+                disabled={!selectedModel || trims.length === 0}
+                className={SELECT_CLS}
+              >
+                <option value="">{!selectedModel ? "Select model first…" : trims.length === 0 ? "N/A" : "Select trim…"}</option>
+                {trims.map((t) => <option key={t} value={t}>{t}</option>)}
+              </select>
+            </div>
+
+            {/* Year */}
             <div className="space-y-1">
               <label className="text-xs font-medium text-neutral-500">Year *</label>
-              <Input type="number" placeholder="2021" {...form1.register("year")} />
+              <select {...form1.register("year")} className={SELECT_CLS}>
+                <option value="">Select year…</option>
+                {YEARS.map((y) => <option key={y} value={y}>{y}</option>)}
+              </select>
             </div>
+
+            {/* Mileage */}
             <div className="space-y-1">
               <label className="text-xs font-medium text-neutral-500">Mileage (km) *</label>
               <Input type="number" placeholder="55000" {...form1.register("km")} />
             </div>
+
+            {/* Color */}
             <div className="space-y-1">
               <label className="text-xs font-medium text-neutral-500">Color</label>
-              <Input placeholder="White, Silver…" {...form1.register("color")} />
+              <select {...form1.register("color")} className={SELECT_CLS}>
+                <option value="">Select color…</option>
+                {COLORS.map((c) => <option key={c} value={c}>{c}</option>)}
+              </select>
             </div>
+
+            {/* Condition */}
             <div className="space-y-1">
               <label className="text-xs font-medium text-neutral-500">Condition *</label>
-              <select {...form1.register("condition")} className="w-full rounded-lg border border-neutral-200 px-3 py-2 text-sm">
+              <select {...form1.register("condition")} className={SELECT_CLS}>
                 {CONDITIONS.map((c) => <option key={c} value={c}>{CONDITION_LABEL[c]}</option>)}
               </select>
             </div>
-            <div className="space-y-1">
+
+            {/* City */}
+            <div className="space-y-1 sm:col-span-2">
               <label className="text-xs font-medium text-neutral-500">City *</label>
-              <select {...form1.register("city")} className="w-full rounded-lg border border-neutral-200 px-3 py-2 text-sm">
-                {CITIES.map((c) => <option key={c}>{c}</option>)}
+              <select {...form1.register("city")} className={SELECT_CLS}>
+                <option value="">Select city…</option>
+                {CITIES_QA.map((c) => <option key={c} value={c}>{c}</option>)}
               </select>
             </div>
           </div>

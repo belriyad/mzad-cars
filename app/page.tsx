@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { WHATSAPP_LISTING_MESSAGE, WHATSAPP_LISTING_NUMBER } from "@/lib/constants";
 import { CarWorthWidget } from "@/features/home/car-worth-widget";
+import { InstantOfferWidget } from "@/features/home/instant-offer-widget";
 import { TopDealsStrip } from "@/features/home/top-deals-strip";
 
 export default function Home() {
@@ -87,7 +88,10 @@ export default function Home() {
           <TopDealsStrip />
         </Card>
 
-        <CarWorthWidget />
+        <div className="grid gap-4 grid-rows-2">
+          <InstantOfferWidget />
+          <CarWorthWidget />
+        </div>
       </div>
     </section>
   );

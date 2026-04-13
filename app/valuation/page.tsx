@@ -4,6 +4,7 @@ import { useMutation } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import { useState } from "react";
 import { TrendingDown, TrendingUp, Zap, Info, ChevronRight } from "lucide-react";
 import Link from "next/link";
 import { insightsService } from "@/services/insights.service";
@@ -12,10 +13,12 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { formatCurrencyQAR } from "@/lib/utils";
+import { CAR_CATALOGUE, BODY_TYPES, CITIES_QA, YEARS, getModels, getTrims } from "@/lib/car-data";
 
-const CITIES = ["Doha", "Al Rayyan", "Al Wakrah", "Lusail", "Al Khor", "Umm Salal"];
 const FUEL_TYPES = ["Petrol", "Diesel", "Hybrid", "Electric"];
 const GEAR_TYPES = ["Automatic", "Manual"];
+
+const SELECT_CLS = "w-full rounded-lg border border-neutral-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-neutral-300 disabled:opacity-40 disabled:cursor-not-allowed";
 
 const schema = z.object({
   make:             z.string().min(1, "Required"),
@@ -50,6 +53,11 @@ function ConfidenceBar({ r2 }: { r2: number }) {
 }
 
 export default function ValuationPage() {
+  const [selectedMake, setSelectedMake] = useState("");
+  const [selectedModel, setSelectedModel] = useState("");
+  const models = getModels(selectedMake);
+  const trims  = getTrims(selectedMake, selectedModel);
+
   const form = useForm<FormInput, unknown, FormOutput>({
     resolver: zodResolver(schema),
     defaultValues: { manufacture_year: 2020, km: 50000, city: "Doha" },
@@ -88,56 +96,127 @@ export default function ValuationPage() {
       <Card className="space-y-4">
         <h2 className="font-semibold text-neutral-800">Car details</h2>
         <div className="grid gap-3 sm:grid-cols-2">
+          {/* Make */}
           <div className="space-y-1">
             <label className="text-xs font-medium text-neutral-500">Make *</label>
-            <Input placeholder="Toyota" {...form.register("make")} />
+            <select
+              {...form.register("make")}
+              value={selectedMake}
+              onChange={(e) => {
+                const v = e.target.value;
+                setSelectedMake(v);
+                setSelectedModel("");
+                form.setValue("make", v);
+                form.setValue("model", "");
+              }}
+              className={SELECT_CLS}
+            >
+              <option value="">Select make…</option>
+              {CAR_CATALOGUE.map((m) => <option key={m.name} value={m.name}>{m.name}</option>)}
+            </select>
             {form.formState.errors.make && (
               <p className="text-xs text-red-500">{form.formState.errors.make.message}</p>
             )}
           </div>
+
+          {/* Body type */}
           <div className="space-y-1">
             <label className="text-xs font-medium text-neutral-500">Body type *</label>
-            <Input placeholder="SUV, Sedan, Pickup…" {...form.register("class_name")} />
+            <select {...form.register("class_name")} className={SELECT_CLS}>
+              <option value="">Select body type…</option>
+              {BODY_TYPES.map((b) => <option key={b} value={b}>{b}</option>)}
+            </select>
+            {form.formState.errors.class_name && (
+              <p className="text-xs text-red-500">{form.formState.errors.class_name.message}</p>
+            )}
           </div>
+
+          {/* Model — cascades from make */}
           <div className="space-y-1">
             <label className="text-xs font-medium text-neutral-500">Model</label>
-            <Input placeholder="Camry, Patrol, X5…" {...form.register("model")} />
+            <select
+              {...form.register("model")}
+              value={selectedModel}
+              onChange={(e) => {
+                const v = e.target.value;
+                setSelectedModel(v);
+                form.setValue("model", v);
+              }}
+              disabled={!selectedMake}
+              className={SELECT_CLS}
+            >
+              <option value="">{!selectedMake ? "Select make first…" : "Select model…"}</option>
+              {models.map((m) => <option key={m} value={m}>{m}</option>)}
+            </select>
           </div>
+
+          {/* Trim (informational — not sent to API but useful for UX) */}
+          <div className="space-y-1">
+            <label className="text-xs font-medium text-neutral-500">Trim</label>
+            <select
+              disabled={!selectedModel || trims.length === 0}
+              className={SELECT_CLS}
+            >
+              <option value="">{!selectedModel ? "Select model first…" : trims.length === 0 ? "N/A" : "Select trim…"}</option>
+              {trims.map((t) => <option key={t} value={t}>{t}</option>)}
+            </select>
+          </div>
+
+          {/* Year */}
           <div className="space-y-1">
             <label className="text-xs font-medium text-neutral-500">Year *</label>
-            <Input type="number" placeholder="2021" {...form.register("manufacture_year")} />
+            <select {...form.register("manufacture_year")} className={SELECT_CLS}>
+              {YEARS.map((y) => <option key={y} value={y}>{y}</option>)}
+            </select>
           </div>
+
+          {/* Mileage */}
           <div className="space-y-1">
             <label className="text-xs font-medium text-neutral-500">Mileage (km) *</label>
             <Input type="number" placeholder="55000" {...form.register("km")} />
           </div>
+
+          {/* City */}
           <div className="space-y-1">
             <label className="text-xs font-medium text-neutral-500">City</label>
-            <select {...form.register("city")} className="w-full rounded-lg border border-neutral-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-neutral-300">
-              {CITIES.map((c) => <option key={c}>{c}</option>)}
+            <select {...form.register("city")} className={SELECT_CLS}>
+              {CITIES_QA.map((c) => <option key={c} value={c}>{c}</option>)}
             </select>
           </div>
+
+          {/* Fuel type */}
           <div className="space-y-1">
             <label className="text-xs font-medium text-neutral-500">Fuel type</label>
-            <select {...form.register("fuel_type")} className="w-full rounded-lg border border-neutral-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-neutral-300">
+            <select {...form.register("fuel_type")} className={SELECT_CLS}>
               <option value="">Any</option>
-              {FUEL_TYPES.map((f) => <option key={f}>{f}</option>)}
+              {FUEL_TYPES.map((f) => <option key={f} value={f}>{f}</option>)}
             </select>
           </div>
+
+          {/* Transmission */}
           <div className="space-y-1">
             <label className="text-xs font-medium text-neutral-500">Transmission</label>
-            <select {...form.register("gear_type")} className="w-full rounded-lg border border-neutral-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-neutral-300">
+            <select {...form.register("gear_type")} className={SELECT_CLS}>
               <option value="">Any</option>
-              {GEAR_TYPES.map((g) => <option key={g}>{g}</option>)}
+              {GEAR_TYPES.map((g) => <option key={g} value={g}>{g}</option>)}
             </select>
           </div>
+
+          {/* Cylinders */}
           <div className="space-y-1">
             <label className="text-xs font-medium text-neutral-500">Cylinders</label>
-            <Input type="number" placeholder="4, 6, 8…" {...form.register("cylinder_count")} />
+            <select {...form.register("cylinder_count")} className={SELECT_CLS}>
+              <option value="">Any</option>
+              {[3, 4, 5, 6, 8, 10, 12, 16].map((n) => (
+                <option key={n} value={n}>{n} cylinders</option>
+              ))}
+            </select>
           </div>
+
+          {/* Warranty */}
           <div className="space-y-1">
             <label className="text-xs font-medium text-neutral-500">Warranty</label>
-            <select {...form.register("warranty_status")} className="w-full rounded-lg border border-neutral-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-neutral-300">
+            <select {...form.register("warranty_status")} className={SELECT_CLS}>
               <option value="">Unknown</option>
               <option value="Under warranty">Under warranty</option>
               <option value="Expired">Expired</option>

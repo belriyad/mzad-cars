@@ -13,6 +13,7 @@ import {
   Package,
   ShieldCheck,
   Bell,
+  Zap,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/store/auth-store";
@@ -32,19 +33,19 @@ const guestItems: NavItem[] = [
 ];
 
 const userItems: NavItem[] = [
-  { href: "/",              label: "Home",    icon: Home      },
-  { href: "/listings",      label: "Browse",  icon: Car       },
-  { href: "/favorites",     label: "Saved",   icon: Bookmark  },
-  { href: "/liked",         label: "Liked",   icon: Heart     },
-  { href: "/profile",       label: "Me",      icon: User      },
+  { href: "/",                         label: "Home",    icon: Home      },
+  { href: "/listings",                 label: "Browse",  icon: Car       },
+  { href: "/instant-offers/sell",      label: "Offers",  icon: Zap       },
+  { href: "/favorites",                label: "Saved",   icon: Bookmark  },
+  { href: "/profile",                  label: "Me",      icon: User      },
 ];
 
 const dealerItems: NavItem[] = [
-  { href: "/",                 label: "Home",      icon: Home          },
-  { href: "/listings",         label: "Browse",    icon: Car           },
-  { href: "/dealer",           label: "Dashboard", icon: LayoutDashboard },
-  { href: "/dealer/inventory", label: "Stock",     icon: Package       },
-  { href: "/profile",          label: "Me",        icon: User          },
+  { href: "/",                        label: "Home",      icon: Home          },
+  { href: "/listings",                label: "Browse",    icon: Car           },
+  { href: "/dealer",                  label: "Dashboard", icon: LayoutDashboard },
+  { href: "/dealer/instant-offers",   label: "Offers",    icon: Zap           },
+  { href: "/profile",                 label: "Me",        icon: User          },
 ];
 
 const adminItems: NavItem[] = [

@@ -62,6 +62,14 @@ const QUICK_LINKS = [
     color: "bg-rose-50 text-rose-700",
     beta: false,
   },
+  {
+    href: "/dealer/instant-offers",
+    icon: Zap,
+    label: "Instant Offers",
+    description: "Bid on buyer requests and win deals",
+    color: "bg-amber-50 text-amber-700",
+    beta: false,
+  },
 ];
 
 const TIPS = [

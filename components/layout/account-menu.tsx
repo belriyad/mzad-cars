@@ -19,6 +19,7 @@ import {
   PlusCircle,
   CreditCard,
   FileText,
+  Zap,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/store/auth-store";
@@ -72,19 +73,23 @@ export function AccountMenu() {
   ];
 
   const userItems: MenuItem[] = [
-    { href: "/my-listings",   label: "My Listings",    icon: Car        },
-    { href: "/sell",          label: "Sell a Car",     icon: PlusCircle },
-    { href: "/subscription",  label: "Subscription",   icon: CreditCard },
-    { href: "/valuation",     label: "Car Valuation",  icon: FileText   },
+    { href: "/my-listings",              label: "My Listings",      icon: Car        },
+    { href: "/sell",                     label: "Sell a Car",       icon: PlusCircle },
+    { href: "/instant-offers/sell",      label: "Get Dealer Offers",icon: Zap        },
+    { href: "/instant-offers/my-requests", label: "My Offer Requests", icon: Zap    },
+    { href: "/subscription",             label: "Subscription",     icon: CreditCard },
+    { href: "/valuation",                label: "Car Valuation",    icon: FileText   },
   ];
 
   const dealerItems: MenuItem[] = [
-    { href: "/dealer",            label: "Dealer Dashboard", icon: LayoutDashboard },
-    { href: "/dealer/inventory",  label: "Inventory",        icon: Package         },
-    { href: "/dealer/analytics",  label: "Analytics",        icon: BarChart2       },
-    { href: "/dealer/team",       label: "Team",             icon: Users           },
-    { href: "/sell",              label: "Add Listing",      icon: PlusCircle      },
-    { href: "/subscription",      label: "Subscription",     icon: CreditCard      },
+    { href: "/dealer",                    label: "Dealer Dashboard",  icon: LayoutDashboard },
+    { href: "/dealer/inventory",          label: "Inventory",         icon: Package         },
+    { href: "/dealer/analytics",          label: "Analytics",         icon: BarChart2       },
+    { href: "/dealer/instant-offers",     label: "Instant Offers",    icon: Zap             },
+    { href: "/dealer/instant-offers/bids",label: "My Bids",          icon: Zap             },
+    { href: "/dealer/team",               label: "Team",              icon: Users           },
+    { href: "/sell",                      label: "Add Listing",       icon: PlusCircle      },
+    { href: "/subscription",              label: "Subscription",      icon: CreditCard      },
   ];
 
   const adminItems: MenuItem[] = [

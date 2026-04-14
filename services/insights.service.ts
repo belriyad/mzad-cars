@@ -44,7 +44,7 @@ export const insightsService = {
   recomputeDeals: (token?: string) =>
     apiRequest<DealsRecomputeResponse>("/deals/recompute", { method: "POST", token }),
 
-  /** GET /ml/estimate — ML-powered price estimate with confidence band */
+  /** GET /ml/estimate — ML-powered price estimate (model v5, segmented GradientBoosting) */
   mlEstimate: (query: MLEstimateParams) => {
     const params = new URLSearchParams();
     params.set("make", query.make);
@@ -52,6 +52,7 @@ export const insightsService = {
     params.set("manufacture_year", String(query.manufacture_year));
     params.set("km", String(query.km));
     if (query.model)           params.set("model", query.model);
+    if (query.trim)            params.set("trim", query.trim);
     if (query.fuel_type)       params.set("fuel_type", query.fuel_type);
     if (query.gear_type)       params.set("gear_type", query.gear_type);
     if (query.car_type)        params.set("car_type", query.car_type);

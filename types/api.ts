@@ -52,6 +52,7 @@ export interface MLEstimateParams {
   manufacture_year: number;
   km: number;
   model?: string;
+  trim?: string;           // NEW v2: improves accuracy significantly for high-spread trims
   fuel_type?: string;
   gear_type?: string;
   car_type?: string;
@@ -63,10 +64,11 @@ export interface MLEstimateParams {
 
 export interface MLEstimateResponse {
   estimated_price_qar: number;
-  confidence_range: [number, number]; // [low, high]
-  model_version: string;
+  confidence_range: [number, number]; // [low, high] based on ±MAE of segment model
+  segment: "budget" | "premium";      // NEW v2: budget ≤120k QAR, premium >120k QAR
+  model_version: string;              // e.g. "5.0.0"
   r2: number;
-  rmse: number;
+  mape: number;                       // NEW v2: Mean Absolute % Error — replaces rmse
 }
 
 // ── Instant Offers ────────────────────────────────────────────────────────────

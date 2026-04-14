@@ -1,7 +1,7 @@
 openapi: 3.0.3
 info:
   title: Mzad Cars Backend API
-  version: 1.0.0
+  version: 2.0.0
   description: |
     API contract for listings, valuation, alerts, notifications, push/WhatsApp channels,
     authentication, user/profile management, and listing CRUD.
@@ -1027,32 +1027,47 @@ paths:
   /ml/estimate:
     get:
       tags: [MLValuation]
-      summary: ML-powered car price estimate
+      summary: ML-powered car price estimate (model v5)
+      description: >
+        Returns a price estimate using a segmented GradientBoosting model
+        (budget ≤120k QAR / premium >120k QAR). Supply as many features as
+        known — the model handles missing values internally. Including `trim`
+        significantly improves accuracy for trims with large price spreads
+        (e.g. GXR vs VXR on Land Cruiser, SE vs Platinum on Patrol).
       parameters:
         - in: query
           name: make
           schema: { type: string }
+          example: Toyota
         - in: query
           name: class_name
           schema: { type: string }
+          example: Land Cruiser
+        - in: query
+          name: trim
+          schema: { type: string }
+          example: VXR
+          description: Trim/variant level (e.g. GXR, VXR, SE, Platinum, Sport)
         - in: query
           name: manufacture_year
-          schema: { type: integer }
+          schema: { type: integer, minimum: 1990, maximum: 2030 }
+          example: 2021
         - in: query
           name: km
-          schema: { type: number }
+          schema: { type: number, minimum: 0 }
+          example: 80000
         - in: query
           name: fuel_type
-          schema: { type: string }
+          schema: { type: string, enum: [Petrol, Diesel, Hybrid, Electric] }
         - in: query
           name: gear_type
-          schema: { type: string }
+          schema: { type: string, enum: [Automatic, Manual] }
         - in: query
           name: car_type
           schema: { type: string }
         - in: query
           name: cylinder_count
-          schema: { type: integer }
+          schema: { type: integer, minimum: 2, maximum: 16 }
         - in: query
           name: city
           schema: { type: string }
@@ -1061,7 +1076,7 @@ paths:
           schema: { type: string }
         - in: query
           name: seller_type
-          schema: { type: string }
+          schema: { type: string, enum: [dealer, private] }
       responses:
         "200":
           description: ML price estimate
@@ -1069,6 +1084,13 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/MLEstimate"
+              example:
+                estimated_price_qar: 223827
+                confidence_range: [187689, 259966]
+                segment: premium
+                model_version: "5.0.0"
+                r2: 0.6179
+                mape: 15.71
   /instant-offers/comps:
     get:
       tags: [InstantOffers]
@@ -1688,15 +1710,28 @@ components:
     MLEstimate:
       type: object
       properties:
-        estimated_price_qar: { type: number }
+        estimated_price_qar:
+          type: number
+          description: Point estimate in QAR
         confidence_range:
           type: array
+          description: "[low, high] range in QAR based on ±MAE of the segment model"
           items: { type: number }
           minItems: 2
           maxItems: 2
-        model_version: { type: string }
-        r2: { type: number }
-        rmse: { type: number }
+        segment:
+          type: string
+          enum: [budget, premium]
+          description: budget = ≤120k QAR, premium = >120k QAR
+        model_version:
+          type: string
+          description: Trained model version
+        r2:
+          type: number
+          description: R² of the segment model on held-out test data
+        mape:
+          type: number
+          description: Mean absolute percentage error of the segment model (%)
     OfferRequest:
       type: object
       properties:

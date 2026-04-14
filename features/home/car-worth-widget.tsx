@@ -108,6 +108,7 @@ export function CarWorthWidget() {
         manufacture_year: v.year,
         km: v.km,
         model: v.model || undefined,
+        trim: v.trim || undefined,
       }),
     onSuccess: () => setSubmitted(true),
   });

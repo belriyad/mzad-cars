@@ -23,9 +23,10 @@ const SELECT_CLS = "w-full rounded-lg border border-neutral-200 px-3 py-2 text-s
 const schema = z.object({
   make:             z.string().min(1, "Required"),
   class_name:       z.string().min(1, "Required"),
-  manufacture_year: z.coerce.number().min(1990).max(2026),
+  manufacture_year: z.coerce.number().min(1990).max(2030),
   km:               z.coerce.number().min(0),
   model:            z.string().optional(),
+  trim:             z.string().optional(),
   fuel_type:        z.string().optional(),
   gear_type:        z.string().optional(),
   cylinder_count:   z.coerce.number().optional(),
@@ -71,6 +72,7 @@ export default function ValuationPage() {
         manufacture_year: data.manufacture_year,
         km: data.km,
         model: data.model,
+        trim: data.trim,
         fuel_type: data.fuel_type,
         gear_type: data.gear_type,
         city: data.city,
@@ -154,6 +156,7 @@ export default function ValuationPage() {
           <div className="space-y-1">
             <label className="text-xs font-medium text-neutral-500">Trim</label>
             <select
+              {...form.register("trim")}
               disabled={!selectedModel || trims.length === 0}
               className={SELECT_CLS}
             >
@@ -242,11 +245,16 @@ export default function ValuationPage() {
 
       {result && (
         <Card className="space-y-5">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between flex-wrap gap-2">
             <h2 className="font-semibold text-neutral-800">Valuation result</h2>
-            <Badge className="bg-blue-100 text-blue-700 text-xs">
-              Model {result.model_version}
-            </Badge>
+            <div className="flex gap-2">
+              <Badge className={`text-xs ${result.segment === "premium" ? "bg-violet-100 text-violet-700" : "bg-sky-100 text-sky-700"}`}>
+                {result.segment === "premium" ? "Premium segment" : "Budget segment"}
+              </Badge>
+              <Badge className="bg-blue-100 text-blue-700 text-xs">
+                Model {result.model_version}
+              </Badge>
+            </div>
           </div>
 
           <div className="text-center py-2">
@@ -278,7 +286,7 @@ export default function ValuationPage() {
           <div className="flex items-start gap-2 text-xs text-neutral-400">
             <Info className="h-3.5 w-3.5 mt-0.5 shrink-0" />
             <span>
-              RMSE ±{formatCurrencyQAR(Math.round(result.rmse))} · R²{" "}
+              MAPE {result.mape.toFixed(1)}% · R²{" "}
               {(result.r2 * 100).toFixed(1)}% variance explained · trained on active Qatar listings.
             </span>
           </div>

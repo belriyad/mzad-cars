@@ -1,8 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { useMutation, useQuery } from "@tanstack/react-query";
-import { useForm, useWatch } from "react-hook-form";
+import { useMutation } from "@tanstack/react-query";
+import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import Link from "next/link";
@@ -19,14 +19,15 @@ import {
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { valuationService } from "@/services/valuation.service";
-import { listingsService } from "@/services/listings.service";
+import { insightsService } from "@/services/insights.service";
+import { CAR_CATALOGUE, BODY_TYPES, YEARS, getModels, getTrims } from "@/lib/car-data";
 import { formatCurrencyQAR } from "@/lib/utils";
 
 const schema = z.object({
   make:       z.string().min(1, "Required"),
   class_name: z.string().min(1, "Required"),
   model:      z.string().optional(),
+  trim:       z.string().optional(),
   year:       z.coerce.number().min(1990).max(2030),
   km:         z.coerce.number().min(0),
 });
@@ -87,15 +88,11 @@ const SELECT_CLS =
 
 export function CarWorthWidget() {
   const [submitted, setSubmitted] = useState(false);
+  const [selectedMake, setSelectedMake]   = useState("");
+  const [selectedModel, setSelectedModel] = useState("");
 
-  // global filter options (makes only)
-  const filterQuery = useQuery({
-    queryKey: ["listing-filter-options"],
-    queryFn: () => listingsService.list({ limit: 1 }),
-    staleTime: 60 * 60_000,
-  });
-  const makes = filterQuery.data?.makes ?? [];
-  const classes = filterQuery.data?.classes ?? [];
+  const models = getModels(selectedMake);
+  const trims  = getTrims(selectedMake, selectedModel);
 
   const form = useForm<FormValues>({
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -103,43 +100,27 @@ export function CarWorthWidget() {
     defaultValues: { make: "", class_name: "", model: "", year: 2021, km: 50_000 },
   });
 
-  // watch the make field so model dropdown updates reactively
-  const selectedMake = useWatch({ control: form.control, name: "make" });
-
-  // models derived from actual rows for this make — backend models[] is global, not filtered
-  const modelsQuery = useQuery({
-    queryKey: ["models-for-make", selectedMake],
-    queryFn: () => listingsService.list({ make: selectedMake, limit: 500 }),
-    staleTime: 30 * 60_000,
-    enabled: !!selectedMake,
-  });
-  const models = Array.from(
-    new Set(
-      (modelsQuery.data?.rows ?? [])
-        .map((r) => (r.model ?? "").trim())
-        .filter(Boolean)
-    )
-  ).sort();
-
   const mutation = useMutation({
-    mutationFn: valuationService.estimate,
+    mutationFn: (v: FormValues) =>
+      insightsService.mlEstimate({
+        make: v.make,
+        class_name: v.class_name,
+        manufacture_year: v.year,
+        km: v.km,
+        model: v.model || undefined,
+      }),
     onSuccess: () => setSubmitted(true),
   });
 
-  // when make changes, clear the model field
-  const handleMakeChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    form.setValue("make", e.target.value);
-    form.setValue("model", "");
-  };
+  const watchValues = form.watch();
+  const result      = mutation.data;
 
-  const watchValues  = form.watch();
-  const result       = mutation.data;
-
-  // safe result values — guard against NaN / null / 0 from the API
-  const fairVal  = result && isFinite(result.fair)  && result.fair  > 0 ? result.fair  : null;
-  const lowVal   = result && isFinite(result.low)   && result.low   > 0 ? result.low   : null;
-  const highVal  = result && isFinite(result.high)  && result.high  > 0 ? result.high  : null;
-  const hasValidResult = fairVal !== null;
+  // Map ML response fields → widget display values
+  const fairVal  = result?.estimated_price_qar ?? null;
+  const lowVal   = result?.confidence_range?.[0] ?? null;
+  const highVal  = result?.confidence_range?.[1] ?? null;
+  const confVal  = result?.r2 ?? null;   // r² as proxy for confidence (0–1)
+  const hasValidResult = fairVal != null && isFinite(fairVal) && fairVal > 0;
 
   return (
     <Card className="flex h-full flex-col space-y-0 overflow-hidden p-0">
@@ -173,7 +154,7 @@ export function CarWorthWidget() {
                   </div>
                   <div className="flex flex-col items-center rounded-2xl bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-700">
                     <Sparkles className="mb-0.5 h-4 w-4" />
-                    Fair price
+                    ML estimate
                   </div>
                 </div>
 
@@ -182,7 +163,7 @@ export function CarWorthWidget() {
                     low={lowVal}
                     fair={fairVal!}
                     high={highVal}
-                    confidence={result.confidence}
+                    confidence={confVal ?? undefined}
                   />
                 )}
 
@@ -240,12 +221,19 @@ export function CarWorthWidget() {
             <div className="relative">
               <select
                 {...form.register("make")}
-                onChange={handleMakeChange}
-                disabled={makes.length === 0}
+                value={selectedMake}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  setSelectedMake(v);
+                  setSelectedModel("");
+                  form.setValue("make", v);
+                  form.setValue("model", "");
+                  form.setValue("trim", "");
+                }}
                 className={SELECT_CLS}
               >
-                <option value="">{makes.length === 0 ? "Loading makes…" : "Select make…"}</option>
-                {makes.map((m) => <option key={m} value={m}>{m}</option>)}
+                <option value="">Select make…</option>
+                {CAR_CATALOGUE.map((m) => <option key={m.name} value={m.name}>{m.name}</option>)}
               </select>
               <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-neutral-400" />
               {form.formState.errors.make && (
@@ -253,15 +241,14 @@ export function CarWorthWidget() {
               )}
             </div>
 
-            {/* 2. Class */}
+            {/* 2. Body type */}
             <div className="relative">
               <select
                 {...form.register("class_name")}
-                disabled={classes.length === 0}
                 className={SELECT_CLS}
               >
-                <option value="">{classes.length === 0 ? "Loading classes…" : "Select class…"}</option>
-                {classes.map((c) => <option key={c} value={c}>{c}</option>)}
+                <option value="">Select body type…</option>
+                {BODY_TYPES.map((c) => <option key={c} value={c}>{c}</option>)}
               </select>
               <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-neutral-400" />
               {form.formState.errors.class_name && (
@@ -269,38 +256,51 @@ export function CarWorthWidget() {
               )}
             </div>
 
-            {/* 3. Model — filtered to selected make */}
+            {/* 3. Model — cascades from make */}
             <div className="relative">
-              {models.length > 0 ? (
-                <>
-                  <select {...form.register("model")} className={SELECT_CLS}>
-                    <option value="">Any model</option>
-                    {models.map((m) => <option key={m} value={m}>{m}</option>)}
-                  </select>
-                  <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-neutral-400" />
-                </>
-              ) : (
-                <Input
-                  placeholder={
-                    !selectedMake          ? "Select a make first…"
-                    : modelsQuery.isLoading ? "Loading models…"
-                    :                        "Model (optional — broadens estimate)"
-                  }
-                  disabled={!selectedMake || modelsQuery.isLoading}
-                  {...form.register("model")}
-                />
-              )}
+              <select
+                {...form.register("model")}
+                value={selectedModel}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  setSelectedModel(v);
+                  form.setValue("model", v);
+                  form.setValue("trim", "");
+                }}
+                disabled={!selectedMake}
+                className={SELECT_CLS}
+              >
+                <option value="">{!selectedMake ? "Select make first…" : "Model (optional)"}</option>
+                {models.map((m) => <option key={m} value={m}>{m}</option>)}
+              </select>
+              <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-neutral-400" />
             </div>
 
-            {/* 4. Year + KM */}
+            {/* 4. Trim — cascades from model */}
+            {trims.length > 0 && (
+              <div className="relative">
+                <select
+                  {...form.register("trim")}
+                  disabled={!selectedModel}
+                  className={SELECT_CLS}
+                >
+                  <option value="">Trim (optional)</option>
+                  {trims.map((t) => <option key={t} value={t}>{t}</option>)}
+                </select>
+                <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-neutral-400" />
+              </div>
+            )}
+
+            {/* 5. Year + KM */}
             <div className="grid grid-cols-2 gap-2">
-              <div>
-                <Input
-                  type="number"
-                  placeholder="Year"
+              <div className="relative">
+                <select
                   {...form.register("year")}
-                  className="text-center"
-                />
+                  className={SELECT_CLS}
+                >
+                  {YEARS.map((y) => <option key={y} value={y}>{y}</option>)}
+                </select>
+                <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-neutral-400" />
                 {form.formState.errors.year && (
                   <p className="mt-0.5 text-xs text-rose-500">1990–2030</p>
                 )}

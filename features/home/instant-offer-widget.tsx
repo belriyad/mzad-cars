@@ -1,12 +1,15 @@
 "use client";
 
 import { useState } from "react";
-import { Lock, ChevronDown, Zap, ArrowRight, CheckCircle2 } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { Lock, ChevronDown, Zap, ArrowRight, CheckCircle2, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { useAuthStore } from "@/store/auth-store";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { CAR_CATALOGUE, BODY_TYPES, CITIES_QA, YEARS, KM_RANGES, getModels, getTrims } from "@/lib/car-data";
+import { instantOffersService } from "@/services/instant-offers.service";
+import { formatCurrencyQAR } from "@/lib/utils";
 
 const SELECT_CLS =
   "w-full appearance-none rounded-xl border border-neutral-200 bg-white px-3 py-2.5 pr-8 text-sm text-neutral-800 focus:border-neutral-400 focus:outline-none disabled:opacity-40 disabled:cursor-not-allowed";
@@ -55,6 +58,34 @@ export function InstantOfferWidget() {
 
   const models = getModels(form.make);
   const trims  = getTrims(form.make, form.model);
+
+  // Parse km_range value into a rough midpoint for the comps query
+  const kmMid = form.km_range
+    ? (() => {
+        const [lo, hi] = form.km_range.split("-").map(Number);
+        if (!isNaN(lo) && !isNaN(hi)) return Math.round((lo + hi) / 2);
+        // "150000+" style
+        const single = Number(form.km_range.replace(/\D/g, ""));
+        return isNaN(single) ? 50000 : single + 25000;
+      })()
+    : 50000;
+
+  // Real market comps — enabled once make + year are selected
+  const compsQuery = useQuery({
+    queryKey: ["widget-comps", form.make, form.model, form.year],
+    queryFn: () =>
+      instantOffersService.comps({
+        make: form.make,
+        class_name: form.body_type || "SUV",
+        year: Number(form.year),
+        km: kmMid,
+        model: form.model || undefined,
+      }),
+    enabled: !!(form.make && form.year),
+    staleTime: 5 * 60_000,
+  });
+
+  const comps = compsQuery.data;
 
   function set(field: keyof FormState, value: string) {
     setForm((prev) => {
@@ -246,27 +277,50 @@ export function InstantOfferWidget() {
           </select>
         </SelectWrapper>
 
-        {/* Pricing teaser — locked for guests */}
+        {/* Pricing teaser — shows real market data from /instant-offers/comps */}
         {form.make && form.year && (
           <div className="relative rounded-xl border border-neutral-100 bg-neutral-50 p-3 overflow-hidden">
-            {/* blurred price estimate placeholder */}
-            <div className={`space-y-1 ${!isLoggedIn ? "blur-sm select-none pointer-events-none" : ""}`}>
-              <p className="text-xs text-neutral-500">Market estimate for {form.year} {form.make} {form.model || ""}</p>
-              <p className="text-2xl font-bold text-neutral-900">QAR 85,000 – 110,000</p>
-              <div className="h-2 w-full overflow-hidden rounded-full bg-neutral-200">
-                <div className="h-full w-3/5 rounded-full bg-emerald-400" />
+            {compsQuery.isLoading ? (
+              <div className="flex items-center justify-center gap-2 py-2 text-xs text-neutral-400">
+                <Loader2 className="h-3.5 w-3.5 animate-spin" /> Fetching market data…
               </div>
-            </div>
-            {/* lock overlay for guests */}
-            {!isLoggedIn && (
-              <div className="absolute inset-0 flex flex-col items-center justify-center gap-1.5 bg-white/70 backdrop-blur-[2px] rounded-xl">
-                <Lock className="h-5 w-5 text-neutral-600" />
-                <p className="text-xs font-semibold text-neutral-800">Sign up to see pricing</p>
-                <Link href="/register">
-                  <span className="text-xs text-blue-600 underline font-medium">Create free account</span>
-                </Link>
-              </div>
-            )}
+            ) : comps && comps.count > 0 ? (
+              <>
+                {/* blurred when guest */}
+                <div className={`space-y-1 ${!isLoggedIn ? "blur-sm select-none pointer-events-none" : ""}`}>
+                  <p className="text-xs text-neutral-500">
+                    Market range · {form.year} {form.make} {form.model || ""} · {comps.count} listings
+                  </p>
+                  <p className="text-xl font-bold text-neutral-900">
+                    {comps.p25 != null ? formatCurrencyQAR(comps.p25) : "—"}
+                    {" – "}
+                    {comps.p75 != null ? formatCurrencyQAR(comps.p75) : "—"}
+                  </p>
+                  {comps.median != null && (
+                    <p className="text-xs text-neutral-500">
+                      Median: <span className="font-semibold text-neutral-700">{formatCurrencyQAR(comps.median)}</span>
+                    </p>
+                  )}
+                  <div className="h-2 w-full overflow-hidden rounded-full bg-neutral-200">
+                    <div className="h-full w-3/5 rounded-full bg-emerald-400" />
+                  </div>
+                </div>
+                {/* lock overlay for guests */}
+                {!isLoggedIn && (
+                  <div className="absolute inset-0 flex flex-col items-center justify-center gap-1.5 bg-white/70 backdrop-blur-[2px] rounded-xl">
+                    <Lock className="h-5 w-5 text-neutral-600" />
+                    <p className="text-xs font-semibold text-neutral-800">Sign up to see pricing</p>
+                    <Link href="/register">
+                      <span className="text-xs text-blue-600 underline font-medium">Create free account</span>
+                    </Link>
+                  </div>
+                )}
+              </>
+            ) : compsQuery.isFetched ? (
+              <p className="text-xs text-neutral-400 text-center py-1">
+                No comparable listings found — select a model to narrow results.
+              </p>
+            ) : null}
           </div>
         )}
 
